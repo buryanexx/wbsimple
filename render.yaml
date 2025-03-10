@@ -1,0 +1,20 @@
+services:
+  - type: web
+    name: wbsimple-api
+    env: docker
+    dockerfilePath: ./Dockerfile
+    envVars:
+      - key: PORT
+        value: 5000
+      - key: NODE_ENV
+        value: production
+      - key: MONGODB_URI
+        sync: false
+      - key: JWT_SECRET
+        sync: false
+      - key: TELEGRAM_BOT_TOKEN
+        value: 7941755158:AAEb-k6I7g3rvM5rFJezC_bP7-wNnfZyGa8
+      - key: TELEGRAM_PAYMENT_TOKEN
+        sync: false
+      - key: WEBAPP_URL
+        sync: false 
