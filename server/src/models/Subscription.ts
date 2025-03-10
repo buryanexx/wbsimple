@@ -1,54 +1,95 @@
-import mongoose, { Document, Schema } from 'mongoose';
+import { Model, DataTypes, Optional } from 'sequelize';
+import sequelize from '../config/database.js';
 
-export interface ISubscription extends Document {
-  userId: mongoose.Types.ObjectId;
-  telegramId: number;
+// Интерфейс для атрибутов подписки
+interface SubscriptionAttributes {
+  id: number;
+  userId: number;
   startDate: Date;
   endDate: Date;
   paymentId: string;
   amount: number;
   status: 'active' | 'expired' | 'cancelled';
-  autoRenew: boolean;
+  autoRenewal: boolean;
   createdAt: Date;
   updatedAt: Date;
 }
 
-const SubscriptionSchema = new Schema<ISubscription>({
-  userId: {
-    type: Schema.Types.ObjectId,
-    ref: 'User',
-    required: true
-  },
-  telegramId: {
-    type: Number,
-    required: true
-  },
-  startDate: {
-    type: Date,
-    required: true,
-    default: Date.now
-  },
-  endDate: {
-    type: Date,
-    required: true
-  },
-  paymentId: {
-    type: String,
-    required: true
-  },
-  amount: {
-    type: Number,
-    required: true
-  },
-  status: {
-    type: String,
-    enum: ['active', 'expired', 'cancelled'],
-    default: 'active'
-  },
-  autoRenew: {
-    type: Boolean,
-    default: true
-  }
-}, { timestamps: true });
+// Интерфейс для создания подписки
+interface SubscriptionCreationAttributes extends Optional<SubscriptionAttributes, 'id' | 'createdAt' | 'updatedAt'> {}
 
-export default mongoose.model<ISubscription>('Subscription', SubscriptionSchema); 
+// Класс модели подписки
+class Subscription extends Model<SubscriptionAttributes, SubscriptionCreationAttributes> implements SubscriptionAttributes {
+  public id!: number;
+  public userId!: number;
+  public startDate!: Date;
+  public endDate!: Date;
+  public paymentId!: string;
+  public amount!: number;
+  public status!: 'active' | 'expired' | 'cancelled';
+  public autoRenewal!: boolean;
+  public createdAt!: Date;
+  public updatedAt!: Date;
+}
+
+// Инициализация модели
+Subscription.init(
+  {
+    id: {
+      type: DataTypes.INTEGER,
+      autoIncrement: true,
+      primaryKey: true,
+    },
+    userId: {
+      type: DataTypes.INTEGER,
+      allowNull: false,
+      references: {
+        model: 'users',
+        key: 'id',
+      },
+    },
+    startDate: {
+      type: DataTypes.DATE,
+      allowNull: false,
+    },
+    endDate: {
+      type: DataTypes.DATE,
+      allowNull: false,
+    },
+    paymentId: {
+      type: DataTypes.STRING,
+      allowNull: false,
+    },
+    amount: {
+      type: DataTypes.FLOAT,
+      allowNull: false,
+    },
+    status: {
+      type: DataTypes.ENUM('active', 'expired', 'cancelled'),
+      allowNull: false,
+    },
+    autoRenewal: {
+      type: DataTypes.BOOLEAN,
+      allowNull: false,
+      defaultValue: false,
+    },
+    createdAt: {
+      type: DataTypes.DATE,
+      allowNull: false,
+      defaultValue: DataTypes.NOW,
+    },
+    updatedAt: {
+      type: DataTypes.DATE,
+      allowNull: false,
+      defaultValue: DataTypes.NOW,
+    },
+  },
+  {
+    sequelize,
+    modelName: 'Subscription',
+    tableName: 'subscriptions',
+    timestamps: true,
+  }
+);
+
+export default Subscription; 

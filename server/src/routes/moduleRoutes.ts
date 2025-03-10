@@ -1,32 +1,25 @@
 import express from 'express';
-import {
-  getAllModules,
-  getModuleById,
-  createModule,
-  updateModule,
-  deleteModule,
-  completeModule
-} from '../controllers/moduleController.js';
-import { auth, checkSubscription } from '../middleware/auth.js';
+import moduleController from '../controllers/moduleController.js';
+import { authenticateToken } from '../middleware/auth.js';
 
 const router = express.Router();
 
 // Получение всех модулей
-router.get('/', auth, getAllModules);
+router.get('/', moduleController.getAllModules);
 
 // Получение модуля по ID
-router.get('/:moduleId', auth, getModuleById);
+router.get('/:id', moduleController.getModuleById);
 
-// Создание нового модуля (для админов)
-router.post('/', auth, createModule);
+// Создание нового модуля (только для администраторов)
+router.post('/', authenticateToken, moduleController.createModule);
 
-// Обновление модуля (для админов)
-router.put('/:moduleId', auth, updateModule);
+// Обновление модуля (только для администраторов)
+router.put('/:id', authenticateToken, moduleController.updateModule);
 
-// Удаление модуля (для админов)
-router.delete('/:moduleId', auth, deleteModule);
+// Удаление модуля (только для администраторов)
+router.delete('/:id', authenticateToken, moduleController.deleteModule);
 
 // Отметка модуля как завершенного
-router.post('/:moduleId/complete', auth, completeModule);
+router.post('/:id/complete', authenticateToken, moduleController.completeModule);
 
 export default router; 

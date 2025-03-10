@@ -1,32 +1,28 @@
 import express from 'express';
-import {
-  getLessonById,
-  getLessonsByModuleId,
-  createLesson,
-  updateLesson,
-  deleteLesson,
-  completeLesson
-} from '../controllers/lessonController.js';
-import { auth, checkSubscription } from '../middleware/auth.js';
+import lessonController from '../controllers/lessonController.js';
+import { authenticateToken } from '../middleware/auth.js';
 
 const router = express.Router();
 
-// Получение всех уроков модуля
-router.get('/module/:moduleId', auth, getLessonsByModuleId);
+// Получение всех уроков
+router.get('/', lessonController.getAllLessons);
 
 // Получение урока по ID
-router.get('/:moduleId/:lessonId', auth, getLessonById);
+router.get('/:id', lessonController.getLessonById);
 
-// Создание нового урока (для админов)
-router.post('/', auth, createLesson);
+// Получение уроков по ID модуля
+router.get('/module/:moduleId', lessonController.getLessonsByModuleId);
 
-// Обновление урока (для админов)
-router.put('/:moduleId/:lessonId', auth, updateLesson);
+// Создание нового урока (только для администраторов)
+router.post('/', authenticateToken, lessonController.createLesson);
 
-// Удаление урока (для админов)
-router.delete('/:moduleId/:lessonId', auth, deleteLesson);
+// Обновление урока (только для администраторов)
+router.put('/:id', authenticateToken, lessonController.updateLesson);
+
+// Удаление урока (только для администраторов)
+router.delete('/:id', authenticateToken, lessonController.deleteLesson);
 
 // Отметка урока как завершенного
-router.post('/:moduleId/:lessonId/complete', auth, completeLesson);
+router.post('/:id/complete', authenticateToken, lessonController.completeLesson);
 
 export default router; 

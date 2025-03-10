@@ -1,4 +1,5 @@
-import { Telegraf } from 'telegraf';
+import { Telegraf, Context } from 'telegraf';
+import axios from 'axios';
 import dotenv from 'dotenv';
 
 dotenv.config();
@@ -13,101 +14,102 @@ if (!TELEGRAM_BOT_TOKEN) {
 // Инициализация бота
 const bot = new Telegraf(TELEGRAM_BOT_TOKEN);
 
-// Обработка команды /start
-bot.start((ctx) => {
-  ctx.reply(
-    'Добро пожаловать в WB Simple! 🚀\n\n' +
-    'Образовательная платформа для обучения заработку на Wildberries с нуля до 1.000.000 рублей.\n\n' +
-    'Используйте кнопку ниже, чтобы открыть приложение:'
-  );
-  
-  // Отправляем кнопку для открытия Mini App
-  ctx.reply('Открыть WB Simple', {
-    reply_markup: {
-      inline_keyboard: [
-        [{ text: 'Открыть приложение', web_app: { url: process.env.WEBAPP_URL || 'https://example.com' } }]
-      ]
-    }
-  });
-});
-
-// Обработка команды /help
-bot.help((ctx) => {
-  ctx.reply(
-    'WB Simple - образовательная платформа для обучения заработку на Wildberries.\n\n' +
-    'Доступные команды:\n' +
-    '/start - Начать работу с ботом\n' +
-    '/help - Показать справку\n' +
-    '/subscription - Информация о подписке'
-  );
-});
-
-// Обработка команды /subscription
-bot.command('subscription', (ctx) => {
-  ctx.reply(
-    'Подписка на WB Simple дает вам:\n\n' +
-    '✅ Полный доступ ко всем 8 модулям курса\n' +
-    '✅ Библиотеку шаблонов и фишек для продавцов\n' +
-    '✅ Доступ в закрытый Telegram-канал\n' +
-    '✅ Обновления и новые материалы\n\n' +
-    'Стоимость подписки: 999 ₽/месяц\n\n' +
-    'Для оформления подписки используйте приложение:',
-    {
-      reply_markup: {
-        inline_keyboard: [
-          [{ text: 'Оформить подписку', web_app: { url: `${process.env.WEBAPP_URL || 'https://example.com'}/subscription` } }]
-        ]
-      }
-    }
-  );
-});
-
-// Функция для отправки уведомления пользователю
-export const sendNotification = async (telegramId: number, message: string): Promise<void> => {
-  try {
-    await bot.telegram.sendMessage(telegramId, message);
-  } catch (error) {
-    console.error('Ошибка отправки уведомления:', error);
-  }
-};
-
-// Функция для отправки инвайт-ссылки в закрытый канал
-export const sendChannelInvite = async (telegramId: number, channelLink: string): Promise<void> => {
-  try {
-    await bot.telegram.sendMessage(
-      telegramId,
-      'Поздравляем! Вы получили доступ к закрытому каналу WB Simple.\n\n' +
-      'Используйте ссылку ниже для входа:',
-      {
-        reply_markup: {
-          inline_keyboard: [
-            [{ text: 'Присоединиться к каналу', url: channelLink }]
-          ]
-        }
-      }
-    );
-  } catch (error) {
-    console.error('Ошибка отправки инвайт-ссылки:', error);
-  }
-};
-
-// Запуск бота
-export const startBot = async (): Promise<void> => {
-  try {
-    await bot.launch();
-    console.log('Telegram бот запущен');
-  } catch (error) {
-    console.error('Ошибка запуска Telegram бота:', error);
-  }
-};
-
-// Остановка бота при завершении работы приложения
-process.once('SIGINT', () => bot.stop('SIGINT'));
-process.once('SIGTERM', () => bot.stop('SIGTERM'));
-
-export default {
+// Сервис для работы с Telegram
+const telegramService = {
+  // Экземпляр бота
   bot,
-  startBot,
-  sendNotification,
-  sendChannelInvite
-}; 
+  
+  // Запуск бота
+  startBot: async (): Promise<void> => {
+    try {
+      // Настраиваем команды бота
+      await bot.telegram.setMyCommands([
+        { command: 'start', description: 'Начать работу с ботом' },
+        { command: 'help', description: 'Получить помощь' },
+        { command: 'subscription', description: 'Информация о подписке' },
+      ]);
+      
+      // Обработчик команды /start
+      bot.command('start', async (ctx) => {
+        await ctx.reply(
+          'Добро пожаловать в WB Simple! 👋\n\n' +
+          'Это образовательная платформа для продавцов на Wildberries.\n\n' +
+          'Используйте команду /subscription для получения информации о подписке.'
+        );
+      });
+      
+      // Обработчик команды /help
+      bot.command('help', async (ctx) => {
+        await ctx.reply(
+          'Команды бота:\n\n' +
+          '/start - Начать работу с ботом\n' +
+          '/help - Получить помощь\n' +
+          '/subscription - Информация о подписке'
+        );
+      });
+      
+      // Обработчик команды /subscription
+      bot.command('subscription', async (ctx) => {
+        await ctx.reply(
+          'Для получения информации о подписке и управления ею, пожалуйста, воспользуйтесь веб-приложением.'
+        );
+      });
+      
+      // Запускаем бота
+      await bot.launch();
+      console.log('Telegram бот запущен');
+    } catch (error) {
+      console.error('Ошибка запуска Telegram бота:', error);
+      throw error;
+    }
+  },
+  
+  // Отправка уведомления пользователю
+  sendNotification: async (telegramId: string, message: string): Promise<void> => {
+    try {
+      await bot.telegram.sendMessage(telegramId, message);
+    } catch (error) {
+      console.error('Ошибка отправки уведомления:', error);
+      throw error;
+    }
+  },
+  
+  // Отправка приглашения в канал
+  sendChannelInvite: async (telegramId: string): Promise<void> => {
+    try {
+      const channelLink = process.env.TELEGRAM_CHANNEL_LINK || 'https://t.me/+exampleinvitelink';
+      
+      await bot.telegram.sendMessage(
+        telegramId,
+        `Поздравляем! Ваша подписка активирована. Теперь у вас есть доступ к закрытому каналу: ${channelLink}`
+      );
+    } catch (error) {
+      console.error('Ошибка отправки приглашения в канал:', error);
+      throw error;
+    }
+  },
+  
+  // Создание инвойса для оплаты
+  createInvoice: async (
+    telegramId: string,
+    title: string,
+    description: string,
+    amount: number,
+    metadata: any
+  ): Promise<{ payment_url: string }> => {
+    try {
+      // В реальном приложении здесь должен быть запрос к Telegram Payments API
+      // для создания инвойса
+      
+      // Для демонстрации возвращаем фиктивную ссылку на оплату
+      return {
+        payment_url: `https://t.me/invoice/example_${Date.now()}`
+      };
+    } catch (error) {
+      console.error('Ошибка создания инвойса:', error);
+      throw error;
+    }
+  },
+};
+
+export default telegramService; 

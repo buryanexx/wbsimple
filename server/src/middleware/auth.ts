@@ -1,7 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 import dotenv from 'dotenv';
-import User from '../models/User.js';
+import { User } from '../models/index.js';
 
 dotenv.config();
 
@@ -16,20 +16,22 @@ declare global {
   }
 }
 
-export const auth = async (req: Request, res: Response, next: NextFunction) => {
+// Middleware для проверки JWT токена
+export const authenticateToken = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    // Получаем токен из заголовка
-    const token = req.header('Authorization')?.replace('Bearer ', '');
+    // Получаем токен из заголовка Authorization
+    const authHeader = req.headers.authorization;
+    const token = authHeader && authHeader.split(' ')[1]; // Bearer TOKEN
     
     if (!token) {
-      return res.status(401).json({ message: 'Требуется аутентификация' });
+      return res.status(401).json({ message: 'Токен не предоставлен' });
     }
     
-    // Верифицируем токен
-    const decoded = jwt.verify(token, JWT_SECRET) as { id: string };
+    // Проверяем токен
+    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'default_secret') as { id: number };
     
-    // Находим пользователя по ID
-    const user = await User.findById(decoded.id);
+    // Находим пользователя по ID из токена
+    const user = await User.findByPk(decoded.id);
     
     if (!user) {
       return res.status(401).json({ message: 'Пользователь не найден' });
@@ -37,34 +39,39 @@ export const auth = async (req: Request, res: Response, next: NextFunction) => {
     
     // Добавляем пользователя в объект запроса
     req.user = user;
+    
     next();
   } catch (error) {
-    res.status(401).json({ message: 'Неверный токен аутентификации' });
+    console.error('Ошибка аутентификации:', error);
+    
+    if ((error as Error).name === 'JsonWebTokenError') {
+      return res.status(401).json({ message: 'Недействительный токен' });
+    }
+    
+    if ((error as Error).name === 'TokenExpiredError') {
+      return res.status(401).json({ message: 'Срок действия токена истек' });
+    }
+    
+    res.status(500).json({ message: 'Ошибка сервера при аутентификации' });
   }
 };
 
 // Middleware для проверки подписки
 export const checkSubscription = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    if (!req.user) {
-      return res.status(401).json({ message: 'Требуется аутентификация' });
+    const user = req.user;
+    
+    if (!user) {
+      return res.status(401).json({ message: 'Пользователь не найден' });
     }
     
-    if (!req.user.isSubscribed) {
-      return res.status(403).json({ message: 'Требуется подписка для доступа к этому ресурсу' });
-    }
-    
-    // Проверяем, не истекла ли подписка
-    if (req.user.subscriptionExpiry && new Date(req.user.subscriptionExpiry) < new Date()) {
-      // Обновляем статус подписки
-      req.user.isSubscribed = false;
-      await req.user.save();
-      
-      return res.status(403).json({ message: 'Ваша подписка истекла' });
+    if (!user.hasActiveSubscription) {
+      return res.status(403).json({ message: 'Требуется активная подписка' });
     }
     
     next();
   } catch (error) {
-    res.status(500).json({ message: 'Ошибка сервера' });
+    console.error('Ошибка проверки подписки:', error);
+    res.status(500).json({ message: 'Ошибка сервера при проверке подписки' });
   }
 }; 

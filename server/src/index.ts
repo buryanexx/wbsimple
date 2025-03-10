@@ -1,61 +1,61 @@
 import express from 'express';
 import cors from 'cors';
-import helmet from 'helmet';
-import morgan from 'morgan';
 import dotenv from 'dotenv';
-import { connectDB } from './config/database.js';
+import { testDatabaseConnection } from './config/database.js';
+import { syncModels } from './models/index.js';
 import telegramService from './services/telegramService.js';
-
-// Импорт маршрутов
 import authRoutes from './routes/authRoutes.js';
 import moduleRoutes from './routes/moduleRoutes.js';
 import lessonRoutes from './routes/lessonRoutes.js';
-import templateRoutes from './routes/templateRoutes.js';
 import subscriptionRoutes from './routes/subscriptionRoutes.js';
 
-// Загрузка переменных окружения
-dotenv.config();
+// Загружаем переменные окружения в зависимости от NODE_ENV
+if (process.env.NODE_ENV === 'production') {
+  dotenv.config({ path: '.env.production' });
+} else {
+  dotenv.config({ path: '.env.development' });
+}
 
-// Подключение к базе данных
-connectDB();
-
-// Инициализация Express
 const app = express();
-const PORT = process.env.PORT || 5000;
+const PORT = process.env.PORT || 5005;
 
 // Middleware
 app.use(cors());
-app.use(helmet());
-app.use(morgan('dev'));
 app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
-
-// Маршруты
-app.use('/api/auth', authRoutes);
-app.use('/api/modules', moduleRoutes);
-app.use('/api/lessons', lessonRoutes);
-app.use('/api/templates', templateRoutes);
-app.use('/api/subscriptions', subscriptionRoutes);
 
 // Базовый маршрут
 app.get('/', (req, res) => {
   res.json({ message: 'WB Simple API' });
 });
 
-// Обработка ошибок
-app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
-  console.error(err.stack);
-  res.status(500).json({ message: 'Ошибка сервера' });
-});
+// Маршруты API
+app.use('/api/auth', authRoutes);
+app.use('/api/modules', moduleRoutes);
+app.use('/api/lessons', lessonRoutes);
+app.use('/api/subscriptions', subscriptionRoutes);
 
 // Запуск сервера
-app.listen(PORT, async () => {
-  console.log(`Сервер запущен на порту ${PORT}`);
-  
-  // Запуск Telegram бота
+const startServer = async () => {
   try {
-    await telegramService.startBot();
+    // Проверяем подключение к базе данных
+    await testDatabaseConnection();
+    
+    // Синхронизируем модели с базой данных (только в режиме разработки)
+    await syncModels();
+    
+    // Запускаем сервер
+    app.listen(PORT, () => {
+      console.log(`Сервер запущен на порту ${PORT}`);
+      
+      // Запускаем Telegram бота
+      telegramService.startBot()
+        .then(() => console.log('Telegram бот запущен'))
+        .catch((error: Error) => console.error('Ошибка запуска Telegram бота:', error));
+    });
   } catch (error) {
-    console.error('Ошибка запуска Telegram бота:', error);
+    console.error('Ошибка запуска сервера:', error);
+    process.exit(1);
   }
-}); 
+};
+
+startServer(); 

@@ -1,77 +1,126 @@
-import mongoose, { Document, Schema } from 'mongoose';
-import bcrypt from 'bcrypt';
+import { Model, DataTypes, Optional } from 'sequelize';
+import sequelize from '../config/database.js';
+import bcrypt from 'bcryptjs';
 
-export interface IUser extends Document {
-  telegramId: number;
+// Интерфейс для атрибутов пользователя
+interface UserAttributes {
+  id: number;
+  telegramId: string;
+  username: string;
   firstName: string;
   lastName?: string;
-  username?: string;
   photoUrl?: string;
   email?: string;
-  isSubscribed: boolean;
-  subscriptionExpiry?: Date;
-  registeredAt: Date;
-  lastLoginAt: Date;
-  progress: {
-    completedLessons: number[];
-    completedModules: number[];
-  };
-  comparePassword(candidatePassword: string): Promise<boolean>;
+  isAdmin: boolean;
+  hasActiveSubscription: boolean;
+  subscriptionEndDate?: Date;
+  autoRenewal: boolean;
+  createdAt: Date;
+  updatedAt: Date;
 }
 
-const UserSchema = new Schema<IUser>({
-  telegramId: {
-    type: Number,
-    required: true,
-    unique: true
-  },
-  firstName: {
-    type: String,
-    required: true
-  },
-  lastName: {
-    type: String
-  },
-  username: {
-    type: String
-  },
-  photoUrl: {
-    type: String
-  },
-  email: {
-    type: String,
-    sparse: true,
-    lowercase: true,
-    trim: true
-  },
-  isSubscribed: {
-    type: Boolean,
-    default: false
-  },
-  subscriptionExpiry: {
-    type: Date
-  },
-  registeredAt: {
-    type: Date,
-    default: Date.now
-  },
-  lastLoginAt: {
-    type: Date,
-    default: Date.now
-  },
-  progress: {
-    completedLessons: [Number],
-    completedModules: [Number]
-  }
-});
+// Интерфейс для создания пользователя (некоторые поля могут быть опциональными)
+interface UserCreationAttributes extends Optional<UserAttributes, 'id' | 'isAdmin' | 'hasActiveSubscription' | 'autoRenewal' | 'createdAt' | 'updatedAt'> {}
 
-// Метод для сравнения паролей (если в будущем добавим аутентификацию по паролю)
-UserSchema.methods.comparePassword = async function(candidatePassword: string): Promise<boolean> {
-  try {
-    return await bcrypt.compare(candidatePassword, this.password);
-  } catch (error) {
-    return false;
-  }
-};
+// Класс модели пользователя
+class User extends Model<UserAttributes, UserCreationAttributes> implements UserAttributes {
+  public id!: number;
+  public telegramId!: string;
+  public username!: string;
+  public firstName!: string;
+  public lastName?: string;
+  public photoUrl?: string;
+  public email?: string;
+  public isAdmin!: boolean;
+  public hasActiveSubscription!: boolean;
+  public subscriptionEndDate?: Date;
+  public autoRenewal!: boolean;
+  public createdAt!: Date;
+  public updatedAt!: Date;
 
-export default mongoose.model<IUser>('User', UserSchema); 
+  // Метод для проверки, является ли пользователь администратором
+  public isAdminUser(): boolean {
+    return this.isAdmin;
+  }
+
+  // Метод для проверки, имеет ли пользователь активную подписку
+  public hasSubscription(): boolean {
+    return this.hasActiveSubscription;
+  }
+}
+
+// Инициализация модели
+User.init(
+  {
+    id: {
+      type: DataTypes.INTEGER,
+      autoIncrement: true,
+      primaryKey: true,
+    },
+    telegramId: {
+      type: DataTypes.STRING,
+      allowNull: false,
+      unique: true,
+    },
+    username: {
+      type: DataTypes.STRING,
+      allowNull: false,
+    },
+    firstName: {
+      type: DataTypes.STRING,
+      allowNull: false,
+    },
+    lastName: {
+      type: DataTypes.STRING,
+      allowNull: true,
+    },
+    photoUrl: {
+      type: DataTypes.STRING,
+      allowNull: true,
+    },
+    email: {
+      type: DataTypes.STRING,
+      allowNull: true,
+      validate: {
+        isEmail: true,
+      },
+    },
+    isAdmin: {
+      type: DataTypes.BOOLEAN,
+      allowNull: false,
+      defaultValue: false,
+    },
+    hasActiveSubscription: {
+      type: DataTypes.BOOLEAN,
+      allowNull: false,
+      defaultValue: false,
+    },
+    subscriptionEndDate: {
+      type: DataTypes.DATE,
+      allowNull: true,
+    },
+    autoRenewal: {
+      type: DataTypes.BOOLEAN,
+      allowNull: false,
+      defaultValue: false,
+    },
+    createdAt: {
+      type: DataTypes.DATE,
+      allowNull: false,
+      defaultValue: DataTypes.NOW,
+    },
+    updatedAt: {
+      type: DataTypes.DATE,
+      allowNull: false,
+      defaultValue: DataTypes.NOW,
+    },
+  },
+  {
+    sequelize,
+    modelName: 'User',
+    tableName: 'users',
+    timestamps: true,
+  }
+);
+
+export default User; 

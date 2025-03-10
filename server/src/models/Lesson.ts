@@ -1,91 +1,89 @@
-import mongoose, { Document, Schema } from 'mongoose';
+import { Model, DataTypes, Optional } from 'sequelize';
+import sequelize from '../config/database.js';
 
-interface IQuizQuestion {
-  question: string;
-  options: string[];
-  correctAnswer: number;
-}
-
-interface IMaterial {
-  name: string;
-  url: string;
-  type: string;
-}
-
-export interface ILesson extends Document {
-  lessonId: number;
+// Интерфейс для атрибутов урока
+interface LessonAttributes {
+  id: number;
   moduleId: number;
   title: string;
-  description: string;
-  videoUrl: string;
-  duration: string;
+  content: string;
   order: number;
-  materials: IMaterial[];
-  quiz: IQuizQuestion[];
+  videoUrl?: string;
+  isPublished: boolean;
   createdAt: Date;
   updatedAt: Date;
 }
 
-const LessonSchema = new Schema<ILesson>({
-  lessonId: {
-    type: Number,
-    required: true
-  },
-  moduleId: {
-    type: Number,
-    required: true
-  },
-  title: {
-    type: String,
-    required: true
-  },
-  description: {
-    type: String,
-    required: true
-  },
-  videoUrl: {
-    type: String,
-    required: true
-  },
-  duration: {
-    type: String,
-    required: true
-  },
-  order: {
-    type: Number,
-    required: true
-  },
-  materials: [{
-    name: {
-      type: String,
-      required: true
-    },
-    url: {
-      type: String,
-      required: true
-    },
-    type: {
-      type: String,
-      default: 'pdf'
-    }
-  }],
-  quiz: [{
-    question: {
-      type: String,
-      required: true
-    },
-    options: {
-      type: [String],
-      required: true
-    },
-    correctAnswer: {
-      type: Number,
-      required: true
-    }
-  }]
-}, { timestamps: true });
+// Интерфейс для создания урока
+interface LessonCreationAttributes extends Optional<LessonAttributes, 'id' | 'isPublished' | 'createdAt' | 'updatedAt'> {}
 
-// Составной индекс для уникальности пары moduleId и lessonId
-LessonSchema.index({ moduleId: 1, lessonId: 1 }, { unique: true });
+// Класс модели урока
+class Lesson extends Model<LessonAttributes, LessonCreationAttributes> implements LessonAttributes {
+  public id!: number;
+  public moduleId!: number;
+  public title!: string;
+  public content!: string;
+  public order!: number;
+  public videoUrl?: string;
+  public isPublished!: boolean;
+  public createdAt!: Date;
+  public updatedAt!: Date;
+}
 
-export default mongoose.model<ILesson>('Lesson', LessonSchema); 
+// Инициализация модели
+Lesson.init(
+  {
+    id: {
+      type: DataTypes.INTEGER,
+      autoIncrement: true,
+      primaryKey: true,
+    },
+    moduleId: {
+      type: DataTypes.INTEGER,
+      allowNull: false,
+      references: {
+        model: 'modules',
+        key: 'id',
+      },
+    },
+    title: {
+      type: DataTypes.STRING,
+      allowNull: false,
+    },
+    content: {
+      type: DataTypes.TEXT,
+      allowNull: false,
+    },
+    order: {
+      type: DataTypes.INTEGER,
+      allowNull: false,
+    },
+    videoUrl: {
+      type: DataTypes.STRING,
+      allowNull: true,
+    },
+    isPublished: {
+      type: DataTypes.BOOLEAN,
+      allowNull: false,
+      defaultValue: false,
+    },
+    createdAt: {
+      type: DataTypes.DATE,
+      allowNull: false,
+      defaultValue: DataTypes.NOW,
+    },
+    updatedAt: {
+      type: DataTypes.DATE,
+      allowNull: false,
+      defaultValue: DataTypes.NOW,
+    },
+  },
+  {
+    sequelize,
+    modelName: 'Lesson',
+    tableName: 'lessons',
+    timestamps: true,
+  }
+);
+
+export default Lesson; 

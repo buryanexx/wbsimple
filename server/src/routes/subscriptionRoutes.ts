@@ -1,28 +1,22 @@
 import express from 'express';
-import {
-  getSubscriptionInfo,
-  createSubscription,
-  cancelAutoRenewal,
-  enableAutoRenewal,
-  handlePaymentWebhook
-} from '../controllers/subscriptionController.js';
-import { auth } from '../middleware/auth.js';
+import subscriptionController from '../controllers/subscriptionController.js';
+import { authenticateToken } from '../middleware/auth.js';
 
 const router = express.Router();
 
-// Получение информации о подписке пользователя
-router.get('/info', auth, getSubscriptionInfo);
+// Получение информации о подписке текущего пользователя
+router.get('/info', authenticateToken, subscriptionController.getSubscriptionInfo);
 
 // Создание новой подписки
-router.post('/', auth, createSubscription);
+router.post('/create', authenticateToken, subscriptionController.createSubscription);
 
 // Отмена автопродления подписки
-router.post('/cancel-auto-renewal', auth, cancelAutoRenewal);
+router.post('/cancel-auto-renewal', authenticateToken, subscriptionController.cancelAutoRenewal);
 
 // Включение автопродления подписки
-router.post('/enable-auto-renewal', auth, enableAutoRenewal);
+router.post('/enable-auto-renewal', authenticateToken, subscriptionController.enableAutoRenewal);
 
-// Обработка webhook от Telegram Payments
-router.post('/webhook', handlePaymentWebhook);
+// Обработка вебхука платежа
+router.post('/payment-webhook', subscriptionController.handlePaymentWebhook);
 
 export default router; 

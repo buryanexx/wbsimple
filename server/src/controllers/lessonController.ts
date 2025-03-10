@@ -1,210 +1,266 @@
 import { Request, Response } from 'express';
-import Lesson from '../models/Lesson.js';
-import Module from '../models/Module.js';
-import User from '../models/User.js';
+import { Lesson, Module, UserProgress } from '../models/index.js';
 
-// Получение урока по ID
-export const getLessonById = async (req: Request, res: Response) => {
-  try {
-    const { moduleId, lessonId } = req.params;
-    
-    const lesson = await Lesson.findOne({
-      moduleId: parseInt(moduleId),
-      lessonId: parseInt(lessonId)
-    });
-    
-    if (!lesson) {
-      return res.status(404).json({ message: 'Урок не найден' });
+// Контроллер для работы с уроками
+const lessonController = {
+  // Получение всех уроков
+  getAllLessons: async (req: Request, res: Response) => {
+    try {
+      // Получаем все уроки, сортируем по модулю и порядку
+      const lessons = await Lesson.findAll({
+        order: [['moduleId', 'ASC'], ['order', 'ASC']],
+        include: [
+          {
+            model: Module,
+            as: 'module',
+            attributes: ['id', 'title'],
+          },
+        ],
+      });
+      
+      res.status(200).json(lessons);
+    } catch (error) {
+      console.error('Ошибка получения уроков:', error);
+      res.status(500).json({ message: 'Ошибка сервера при получении уроков' });
     }
-    
-    res.status(200).json({ lesson });
-  } catch (error) {
-    console.error('Ошибка получения урока:', error);
-    res.status(500).json({ message: 'Ошибка сервера' });
-  }
+  },
+  
+  // Получение урока по ID
+  getLessonById: async (req: Request, res: Response) => {
+    try {
+      const lessonId = parseInt(req.params.id);
+      
+      // Проверяем, что ID является числом
+      if (isNaN(lessonId)) {
+        return res.status(400).json({ message: 'Некорректный ID урока' });
+      }
+      
+      // Находим урок по ID
+      const lesson = await Lesson.findByPk(lessonId, {
+        include: [
+          {
+            model: Module,
+            as: 'module',
+            attributes: ['id', 'title'],
+          },
+        ],
+      });
+      
+      if (!lesson) {
+        return res.status(404).json({ message: 'Урок не найден' });
+      }
+      
+      res.status(200).json(lesson);
+    } catch (error) {
+      console.error('Ошибка получения урока:', error);
+      res.status(500).json({ message: 'Ошибка сервера при получении урока' });
+    }
+  },
+  
+  // Получение уроков по ID модуля
+  getLessonsByModuleId: async (req: Request, res: Response) => {
+    try {
+      const moduleId = parseInt(req.params.moduleId);
+      
+      // Проверяем, что ID является числом
+      if (isNaN(moduleId)) {
+        return res.status(400).json({ message: 'Некорректный ID модуля' });
+      }
+      
+      // Проверяем, существует ли модуль
+      const module = await Module.findByPk(moduleId);
+      
+      if (!module) {
+        return res.status(404).json({ message: 'Модуль не найден' });
+      }
+      
+      // Находим уроки по ID модуля
+      const lessons = await Lesson.findAll({
+        where: { moduleId },
+        order: [['order', 'ASC']],
+      });
+      
+      res.status(200).json(lessons);
+    } catch (error) {
+      console.error('Ошибка получения уроков модуля:', error);
+      res.status(500).json({ message: 'Ошибка сервера при получении уроков модуля' });
+    }
+  },
+  
+  // Создание нового урока (только для администраторов)
+  createLesson: async (req: Request, res: Response) => {
+    try {
+      // Проверяем, является ли пользователь администратором
+      if (!req.user.isAdmin) {
+        return res.status(403).json({ message: 'Доступ запрещен' });
+      }
+      
+      const { moduleId, title, content, order, videoUrl } = req.body;
+      
+      // Проверяем обязательные поля
+      if (!moduleId || !title || !content || !order) {
+        return res.status(400).json({ message: 'Необходимо указать moduleId, title, content и order' });
+      }
+      
+      // Проверяем, существует ли модуль
+      const module = await Module.findByPk(moduleId);
+      
+      if (!module) {
+        return res.status(404).json({ message: 'Модуль не найден' });
+      }
+      
+      // Создаем новый урок
+      const newLesson = await Lesson.create({
+        moduleId,
+        title,
+        content,
+        order,
+        videoUrl,
+        isPublished: false,
+      });
+      
+      res.status(201).json(newLesson);
+    } catch (error) {
+      console.error('Ошибка создания урока:', error);
+      res.status(500).json({ message: 'Ошибка сервера при создании урока' });
+    }
+  },
+  
+  // Обновление урока (только для администраторов)
+  updateLesson: async (req: Request, res: Response) => {
+    try {
+      // Проверяем, является ли пользователь администратором
+      if (!req.user.isAdmin) {
+        return res.status(403).json({ message: 'Доступ запрещен' });
+      }
+      
+      const lessonId = parseInt(req.params.id);
+      
+      // Проверяем, что ID является числом
+      if (isNaN(lessonId)) {
+        return res.status(400).json({ message: 'Некорректный ID урока' });
+      }
+      
+      const { moduleId, title, content, order, videoUrl, isPublished } = req.body;
+      
+      // Находим урок по ID
+      const lesson = await Lesson.findByPk(lessonId);
+      
+      if (!lesson) {
+        return res.status(404).json({ message: 'Урок не найден' });
+      }
+      
+      // Если указан новый moduleId, проверяем, существует ли модуль
+      if (moduleId && moduleId !== lesson.moduleId) {
+        const module = await Module.findByPk(moduleId);
+        
+        if (!module) {
+          return res.status(404).json({ message: 'Модуль не найден' });
+        }
+      }
+      
+      // Обновляем урок
+      await lesson.update({
+        moduleId: moduleId || lesson.moduleId,
+        title: title || lesson.title,
+        content: content || lesson.content,
+        order: order || lesson.order,
+        videoUrl: videoUrl !== undefined ? videoUrl : lesson.videoUrl,
+        isPublished: isPublished !== undefined ? isPublished : lesson.isPublished,
+      });
+      
+      res.status(200).json(lesson);
+    } catch (error) {
+      console.error('Ошибка обновления урока:', error);
+      res.status(500).json({ message: 'Ошибка сервера при обновлении урока' });
+    }
+  },
+  
+  // Удаление урока (только для администраторов)
+  deleteLesson: async (req: Request, res: Response) => {
+    try {
+      // Проверяем, является ли пользователь администратором
+      if (!req.user.isAdmin) {
+        return res.status(403).json({ message: 'Доступ запрещен' });
+      }
+      
+      const lessonId = parseInt(req.params.id);
+      
+      // Проверяем, что ID является числом
+      if (isNaN(lessonId)) {
+        return res.status(400).json({ message: 'Некорректный ID урока' });
+      }
+      
+      // Находим урок по ID
+      const lesson = await Lesson.findByPk(lessonId);
+      
+      if (!lesson) {
+        return res.status(404).json({ message: 'Урок не найден' });
+      }
+      
+      // Удаляем урок
+      await lesson.destroy();
+      
+      res.status(200).json({ message: 'Урок успешно удален' });
+    } catch (error) {
+      console.error('Ошибка удаления урока:', error);
+      res.status(500).json({ message: 'Ошибка сервера при удалении урока' });
+    }
+  },
+  
+  // Отметка урока как завершенного
+  completeLesson: async (req: Request, res: Response) => {
+    try {
+      const userId = req.user.id;
+      const lessonId = parseInt(req.params.id);
+      
+      // Проверяем, что ID является числом
+      if (isNaN(lessonId)) {
+        return res.status(400).json({ message: 'Некорректный ID урока' });
+      }
+      
+      // Находим урок по ID
+      const lesson = await Lesson.findByPk(lessonId);
+      
+      if (!lesson) {
+        return res.status(404).json({ message: 'Урок не найден' });
+      }
+      
+      // Проверяем, завершен ли уже урок
+      let userProgress = await UserProgress.findOne({
+        where: {
+          userId,
+          lessonId,
+        },
+      });
+      
+      if (userProgress) {
+        if (userProgress.completed) {
+          return res.status(400).json({ message: 'Урок уже завершен' });
+        }
+        
+        // Обновляем прогресс
+        await userProgress.update({
+          completed: true,
+          completedAt: new Date(),
+        });
+      } else {
+        // Создаем новую запись о прогрессе
+        userProgress = await UserProgress.create({
+          userId,
+          lessonId,
+          moduleId: lesson.moduleId,
+          completed: true,
+          completedAt: new Date(),
+        });
+      }
+      
+      res.status(200).json({ message: 'Урок успешно завершен', progress: userProgress });
+    } catch (error) {
+      console.error('Ошибка завершения урока:', error);
+      res.status(500).json({ message: 'Ошибка сервера при завершении урока' });
+    }
+  },
 };
 
-// Получение всех уроков модуля
-export const getLessonsByModuleId = async (req: Request, res: Response) => {
-  try {
-    const { moduleId } = req.params;
-    
-    const lessons = await Lesson.find({ moduleId: parseInt(moduleId) }).sort({ order: 1 });
-    
-    res.status(200).json({ lessons });
-  } catch (error) {
-    console.error('Ошибка получения уроков модуля:', error);
-    res.status(500).json({ message: 'Ошибка сервера' });
-  }
-};
-
-// Создание нового урока (для админов)
-export const createLesson = async (req: Request, res: Response) => {
-  try {
-    const {
-      moduleId,
-      title,
-      description,
-      videoUrl,
-      duration,
-      order,
-      materials,
-      quiz
-    } = req.body;
-    
-    // Проверяем, существует ли модуль
-    const module = await Module.findOne({ moduleId: parseInt(moduleId) });
-    
-    if (!module) {
-      return res.status(404).json({ message: 'Модуль не найден' });
-    }
-    
-    // Находим максимальный lessonId для этого модуля
-    const maxLessonIdDoc = await Lesson.findOne({ moduleId: parseInt(moduleId) }).sort({ lessonId: -1 });
-    const nextLessonId = maxLessonIdDoc ? maxLessonIdDoc.lessonId + 1 : 1;
-    
-    const newLesson = new Lesson({
-      moduleId: parseInt(moduleId),
-      lessonId: nextLessonId,
-      title,
-      description,
-      videoUrl,
-      duration,
-      order,
-      materials,
-      quiz
-    });
-    
-    await newLesson.save();
-    
-    // Обновляем количество уроков в модуле
-    module.lessonsCount = await Lesson.countDocuments({ moduleId: parseInt(moduleId) });
-    await module.save();
-    
-    res.status(201).json({ lesson: newLesson });
-  } catch (error) {
-    console.error('Ошибка создания урока:', error);
-    res.status(500).json({ message: 'Ошибка сервера' });
-  }
-};
-
-// Обновление урока (для админов)
-export const updateLesson = async (req: Request, res: Response) => {
-  try {
-    const { moduleId, lessonId } = req.params;
-    const {
-      title,
-      description,
-      videoUrl,
-      duration,
-      order,
-      materials,
-      quiz
-    } = req.body;
-    
-    const lesson = await Lesson.findOne({
-      moduleId: parseInt(moduleId),
-      lessonId: parseInt(lessonId)
-    });
-    
-    if (!lesson) {
-      return res.status(404).json({ message: 'Урок не найден' });
-    }
-    
-    lesson.title = title || lesson.title;
-    lesson.description = description || lesson.description;
-    lesson.videoUrl = videoUrl || lesson.videoUrl;
-    lesson.duration = duration || lesson.duration;
-    lesson.order = order || lesson.order;
-    lesson.materials = materials || lesson.materials;
-    lesson.quiz = quiz || lesson.quiz;
-    
-    await lesson.save();
-    
-    res.status(200).json({ lesson });
-  } catch (error) {
-    console.error('Ошибка обновления урока:', error);
-    res.status(500).json({ message: 'Ошибка сервера' });
-  }
-};
-
-// Удаление урока (для админов)
-export const deleteLesson = async (req: Request, res: Response) => {
-  try {
-    const { moduleId, lessonId } = req.params;
-    
-    const lesson = await Lesson.findOne({
-      moduleId: parseInt(moduleId),
-      lessonId: parseInt(lessonId)
-    });
-    
-    if (!lesson) {
-      return res.status(404).json({ message: 'Урок не найден' });
-    }
-    
-    await lesson.deleteOne();
-    
-    // Обновляем количество уроков в модуле
-    const module = await Module.findOne({ moduleId: parseInt(moduleId) });
-    if (module) {
-      module.lessonsCount = await Lesson.countDocuments({ moduleId: parseInt(moduleId) });
-      await module.save();
-    }
-    
-    res.status(200).json({ message: 'Урок успешно удален' });
-  } catch (error) {
-    console.error('Ошибка удаления урока:', error);
-    res.status(500).json({ message: 'Ошибка сервера' });
-  }
-};
-
-// Отметка урока как завершенного
-export const completeLesson = async (req: Request, res: Response) => {
-  try {
-    const { moduleId, lessonId } = req.params;
-    const user = req.user;
-    
-    if (!user) {
-      return res.status(401).json({ message: 'Пользователь не найден' });
-    }
-    
-    // Проверяем, существует ли урок
-    const lesson = await Lesson.findOne({
-      moduleId: parseInt(moduleId),
-      lessonId: parseInt(lessonId)
-    });
-    
-    if (!lesson) {
-      return res.status(404).json({ message: 'Урок не найден' });
-    }
-    
-    // Создаем уникальный идентификатор урока (moduleId_lessonId)
-    const lessonUniqueId = parseInt(`${moduleId}${lessonId.toString().padStart(2, '0')}`);
-    
-    // Проверяем, не завершен ли уже урок
-    if (user.progress.completedLessons.includes(lessonUniqueId)) {
-      return res.status(400).json({ message: 'Урок уже завершен' });
-    }
-    
-    // Добавляем урок в список завершенных
-    user.progress.completedLessons.push(lessonUniqueId);
-    
-    // Проверяем, завершены ли все уроки модуля
-    const moduleAllLessons = await Lesson.find({ moduleId: parseInt(moduleId) });
-    const moduleLessonIds = moduleAllLessons.map(l => parseInt(`${moduleId}${l.lessonId.toString().padStart(2, '0')}`));
-    
-    const allLessonsCompleted = moduleLessonIds.every(id => user.progress.completedLessons.includes(id));
-    
-    // Если все уроки завершены, отмечаем модуль как завершенный
-    if (allLessonsCompleted && !user.progress.completedModules.includes(parseInt(moduleId))) {
-      user.progress.completedModules.push(parseInt(moduleId));
-    }
-    
-    await user.save();
-    
-    res.status(200).json({ message: 'Урок отмечен как завершенный', progress: user.progress });
-  } catch (error) {
-    console.error('Ошибка отметки урока как завершенного:', error);
-    res.status(500).json({ message: 'Ошибка сервера' });
-  }
-}; 
+export default lessonController; 
