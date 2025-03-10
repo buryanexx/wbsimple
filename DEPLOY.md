@@ -23,7 +23,7 @@
    ```
 6. Отправьте код в репозиторий:
    ```bash
-   git push -u origin main
+   git push -u origin HEAD:master
    ```
 
 ## Шаг 2: Настройка MongoDB Atlas
