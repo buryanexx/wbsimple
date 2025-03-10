@@ -1,0 +1,21 @@
+services:
+  - type: web
+    name: wbsimple-api
+    env: node
+    buildCommand: npm install && npm run build
+    startCommand: npm start
+    envVars:
+      - key: PORT
+        value: 5000
+      - key: NODE_ENV
+        value: production
+      - key: MONGODB_URI
+        sync: false
+      - key: JWT_SECRET
+        sync: false
+      - key: TELEGRAM_BOT_TOKEN
+        sync: false
+      - key: TELEGRAM_PAYMENT_TOKEN
+        sync: false
+      - key: WEBAPP_URL
+        sync: false 
