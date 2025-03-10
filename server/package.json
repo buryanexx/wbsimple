@@ -7,7 +7,7 @@
   "scripts": {
     "start": "node dist/index.js",
     "dev": "nodemon --exec \"node --loader ts-node/esm src/index.ts\"",
-    "build": "tsc",
+    "build": "npm install --save-dev @types/node @types/express && tsc",
     "lint": "eslint src/**/*.ts",
     "seed": "node --loader ts-node/esm src/utils/seedData.ts",
     "seed:prod": "node --loader ts-node/esm src/utils/seedProductionData.ts",
