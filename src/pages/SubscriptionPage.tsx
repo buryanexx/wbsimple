@@ -3,7 +3,6 @@ import { useNavigate } from 'react-router-dom';
 import { useWebApp } from '@vkruglikov/react-telegram-web-app';
 import Card from '../components/Card';
 import Button from '../components/Button';
-import Icon from '../components/Icon';
 
 const SubscriptionPage = () => {
   const navigate = useNavigate();

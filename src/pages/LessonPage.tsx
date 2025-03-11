@@ -4,7 +4,6 @@ import { useWebApp } from '@vkruglikov/react-telegram-web-app';
 import ReactPlayer from 'react-player/lazy';
 import Card from '../components/Card';
 import Button from '../components/Button';
-import Icon from '../components/Icon';
 
 // Временные данные для уроков
 const lessonsData = {
