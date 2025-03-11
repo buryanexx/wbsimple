@@ -99,7 +99,7 @@ const SubscriptionPage = () => {
   }
 
   return (
-    <div className="flex flex-col items-center justify-center p-4 space-y-6 pb-36 animate-fade-in">
+    <div className="flex flex-col items-center justify-center p-4 space-y-6 pb-44 animate-fade-in">
       <div className="w-full max-w-md">
         <Button 
           variant="ghost" 

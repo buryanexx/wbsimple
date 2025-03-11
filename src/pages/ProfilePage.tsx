@@ -139,7 +139,7 @@ const ProfilePage = () => {
   );
 
   return (
-    <div className="p-4 pb-36 animate-fade-in">
+    <div className="p-4 pb-44 animate-fade-in">
       <div className="flex items-center justify-between mb-6">
         <Button 
           variant="ghost" 
@@ -274,19 +274,19 @@ const ProfilePage = () => {
                 <div className="text-4xl font-bold text-primary">
                   {profile.statistics.daysActive}
                 </div>
-                <div className="text-xs text-gray-600 dark:text-gray-400 mt-1 text-center">Дней</div>
+                <div className="text-xs text-gray-600 dark:text-gray-400 mt-1 text-center">Дней<br />активности</div>
               </div>
               <div className="p-3 bg-gray-50 dark:bg-gray-800 rounded-lg flex flex-col items-center">
                 <div className="text-4xl font-bold text-primary">
                   {profile.statistics.testsCompleted}
                 </div>
-                <div className="text-xs text-gray-600 dark:text-gray-400 mt-1 text-center">Тестов</div>
+                <div className="text-xs text-gray-600 dark:text-gray-400 mt-1 text-center">Тестов<br />пройдено</div>
               </div>
               <div className="p-3 bg-gray-50 dark:bg-gray-800 rounded-lg flex flex-col items-center">
                 <div className="text-4xl font-bold text-primary">
                   {profile.statistics.averageScore}%
                 </div>
-                <div className="text-xs text-gray-600 dark:text-gray-400 mt-1 text-center">Средний</div>
+                <div className="text-xs text-gray-600 dark:text-gray-400 mt-1 text-center">Средний<br />балл</div>
               </div>
             </div>
           </Card>
