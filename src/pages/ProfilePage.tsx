@@ -245,19 +245,23 @@ const ProfilePage = () => {
               </div>
             </div>
             <div className="grid grid-cols-2 gap-6 text-center">
-              <div className="p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
-                <div className="text-4xl font-bold text-primary mb-1">
-                  {profile.progress.completedLessons}
-                  <span className="text-gray-400 text-lg">/{profile.progress.totalLessons}</span>
+              <div className="p-4 bg-gray-50 dark:bg-gray-800 rounded-lg flex flex-col items-center">
+                <div className="text-6xl font-bold text-primary">
+                  <span className="text-primary">{profile.progress.completedLessons}</span>
+                  <span className="text-gray-400 text-2xl">/{profile.progress.totalLessons}</span>
                 </div>
-                <div className="text-gray-600 dark:text-gray-400">Уроков пройдено</div>
+                <div className="text-gray-600 dark:text-gray-400 mt-1">
+                  Уроков<br />пройдено
+                </div>
               </div>
-              <div className="p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
-                <div className="text-4xl font-bold text-orange-400 mb-1">
-                  {profile.progress.completedModules}
-                  <span className="text-gray-400 text-lg">/{profile.progress.totalModules}</span>
+              <div className="p-4 bg-gray-50 dark:bg-gray-800 rounded-lg flex flex-col items-center">
+                <div className="text-6xl font-bold">
+                  <span className="text-orange-400">{profile.progress.completedModules}</span>
+                  <span className="text-gray-400 text-2xl">/{profile.progress.totalModules}</span>
                 </div>
-                <div className="text-gray-600 dark:text-gray-400">Модулей завершено</div>
+                <div className="text-gray-600 dark:text-gray-400 mt-1">
+                  Модулей<br />завершено
+                </div>
               </div>
             </div>
           </Card>
@@ -265,24 +269,24 @@ const ProfilePage = () => {
           {/* Статистика */}
           <Card className="mb-6">
             <h3 className="text-xl font-bold mb-4">Статистика</h3>
-            <div className="grid grid-cols-3 gap-4 text-center">
-              <div className="p-6 bg-gray-50 dark:bg-gray-800 rounded-lg">
-                <div className="text-5xl font-bold text-primary mb-2">
+            <div className="grid grid-cols-3 gap-4">
+              <div className="p-4 bg-gray-50 dark:bg-gray-800 rounded-lg flex flex-col items-center">
+                <div className="text-6xl font-bold text-primary">
                   {profile.statistics.daysActive}
                 </div>
-                <div className="text-gray-600 dark:text-gray-400">Дней</div>
+                <div className="text-gray-600 dark:text-gray-400 mt-1">Дней</div>
               </div>
-              <div className="p-6 bg-gray-50 dark:bg-gray-800 rounded-lg">
-                <div className="text-5xl font-bold text-primary mb-2">
+              <div className="p-4 bg-gray-50 dark:bg-gray-800 rounded-lg flex flex-col items-center">
+                <div className="text-6xl font-bold text-primary">
                   {profile.statistics.testsCompleted}
                 </div>
-                <div className="text-gray-600 dark:text-gray-400">Тестов</div>
+                <div className="text-gray-600 dark:text-gray-400 mt-1">Тестов</div>
               </div>
-              <div className="p-6 bg-gray-50 dark:bg-gray-800 rounded-lg">
-                <div className="text-5xl font-bold text-primary mb-2">
+              <div className="p-4 bg-gray-50 dark:bg-gray-800 rounded-lg flex flex-col items-center">
+                <div className="text-6xl font-bold text-primary">
                   {profile.statistics.averageScore}%
                 </div>
-                <div className="text-gray-600 dark:text-gray-400">Средний</div>
+                <div className="text-gray-600 dark:text-gray-400 mt-1">Средний</div>
               </div>
             </div>
           </Card>
