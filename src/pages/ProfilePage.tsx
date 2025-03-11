@@ -266,17 +266,23 @@ const ProfilePage = () => {
           <Card className="mb-6">
             <h3 className="text-xl font-bold mb-4">Статистика</h3>
             <div className="grid grid-cols-3 gap-4 text-center">
-              <div className="p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
-                <div className="text-4xl font-bold text-primary mb-1">{profile.statistics.daysActive}</div>
-                <div className="text-sm text-gray-600 dark:text-gray-400">Дней<br />активности</div>
+              <div className="p-6 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                <div className="text-5xl font-bold text-primary mb-2">
+                  {profile.statistics.daysActive}
+                </div>
+                <div className="text-gray-600 dark:text-gray-400">Дней</div>
               </div>
-              <div className="p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
-                <div className="text-4xl font-bold text-primary mb-1">{profile.statistics.testsCompleted}</div>
-                <div className="text-sm text-gray-600 dark:text-gray-400">Тестов<br />пройдено</div>
+              <div className="p-6 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                <div className="text-5xl font-bold text-primary mb-2">
+                  {profile.statistics.testsCompleted}
+                </div>
+                <div className="text-gray-600 dark:text-gray-400">Тестов</div>
               </div>
-              <div className="p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
-                <div className="text-4xl font-bold text-primary mb-1">{profile.statistics.averageScore}%</div>
-                <div className="text-sm text-gray-600 dark:text-gray-400">Средний<br />балл</div>
+              <div className="p-6 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                <div className="text-5xl font-bold text-primary mb-2">
+                  {profile.statistics.averageScore}%
+                </div>
+                <div className="text-gray-600 dark:text-gray-400">Средний</div>
               </div>
             </div>
           </Card>
@@ -288,10 +294,13 @@ const ProfilePage = () => {
           {/* Достижения */}
           <div className="space-y-4">
             {profile.achievements.map((achievement) => (
-              <Card 
+              <div 
                 key={achievement.id}
-                variant={achievement.unlocked ? 'primary' : 'default'}
-                className={`transition-all duration-200 animate-slide-in-right ${
+                className={`p-4 bg-white dark:bg-gray-900 rounded-xl border ${
+                  achievement.unlocked 
+                    ? 'border-primary' 
+                    : 'border-gray-200 dark:border-gray-700'
+                } transition-all duration-200 animate-slide-in-right ${
                   !achievement.unlocked && 'opacity-70'
                 }`}
               >
@@ -313,7 +322,7 @@ const ProfilePage = () => {
                     <div className="ml-auto text-primary text-2xl">✓</div>
                   )}
                 </div>
-              </Card>
+              </div>
             ))}
           </div>
         </div>
