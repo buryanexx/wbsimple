@@ -287,7 +287,7 @@ const ProfilePage = () => {
         <div className="animate-fade-in">
           {/* Достижения */}
           <div className="space-y-4">
-            {profile.achievements.map((achievement, index) => (
+            {profile.achievements.map((achievement) => (
               <Card 
                 key={achievement.id}
                 variant={achievement.unlocked ? 'primary' : 'default'}
