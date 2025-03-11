@@ -148,7 +148,7 @@ const ModulesPage = () => {
   }
 
   return (
-    <div className="p-4 pb-20">
+    <div className="p-4 pb-36">
       <div className="flex items-center justify-between mb-6">
         <Button 
           variant="ghost" 
