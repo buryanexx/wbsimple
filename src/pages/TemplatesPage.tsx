@@ -15,6 +15,7 @@ interface Template {
   isPremium: boolean;
   popularity: number;
   icon: string;
+  isCalculator?: boolean;
 }
 
 // Моковые данные для шаблонов
@@ -68,11 +69,22 @@ const templatesData: Template[] = [
     isPremium: true,
     popularity: 88,
     icon: '🔍'
+  },
+  {
+    id: 6,
+    title: 'Калькулятор прибыли',
+    description: 'Интерактивный калькулятор для расчета потенциальной прибыли от продаж на Wildberries',
+    category: 'Калькуляторы',
+    downloadUrl: '#',
+    isPremium: false,
+    popularity: 95,
+    icon: '🧮',
+    isCalculator: true
   }
 ];
 
 // Категории шаблонов
-const categories = ['Все', 'Карточки товаров', 'Скрипты', 'Таблицы', 'Чек-листы'];
+const categories = ['Все', 'Карточки товаров', 'Скрипты', 'Таблицы', 'Чек-листы', 'Калькуляторы'];
 
 const TemplatesPage = () => {
   const navigate = useNavigate();
@@ -109,6 +121,11 @@ const TemplatesPage = () => {
   }, [isLoading, activeCategory, searchQuery]);
 
   const handleDownload = (template: Template) => {
+    if (template.isCalculator) {
+      navigate('/calculator');
+      return;
+    }
+    
     if (template.isPremium) {
       // Показываем уведомление о необходимости подписки
       if (webApp) {
@@ -257,17 +274,21 @@ const TemplatesPage = () => {
                         <span className="text-xs text-gray-500 dark:text-gray-400 mr-2">
                           {template.category}
                         </span>
-                        <span className="text-xs bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 py-0.5 px-1.5 rounded-full">
-                          Популярность: {template.popularity}%
+                        <span className="text-xs bg-primary/10 text-primary py-0.5 px-1.5 rounded-full">
+                          {template.popularity}%
                         </span>
                       </div>
                       <Button
                         variant={template.isPremium ? 'outline' : 'primary'}
                         size="sm"
                         onClick={() => handleDownload(template)}
-                        leftIcon={template.isPremium ? <span>🔒</span> : <span>⬇️</span>}
+                        leftIcon={
+                          template.isCalculator ? <span>🧮</span> : 
+                          template.isPremium ? <span>🔒</span> : 
+                          <span>⬇️</span>
+                        }
                       >
-                        {template.isPremium ? 'Премиум' : 'Скачать'}
+                        {template.isCalculator ? 'Открыть' : template.isPremium ? 'Премиум' : 'Скачать'}
                       </Button>
                     </div>
                   </div>

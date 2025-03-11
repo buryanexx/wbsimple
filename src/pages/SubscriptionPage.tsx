@@ -8,7 +8,7 @@ const SubscriptionPage = () => {
   const navigate = useNavigate();
   const webApp = useWebApp();
   const [isLoading, setIsLoading] = useState(true);
-  const [selectedPlan, setSelectedPlan] = useState<'monthly' | 'yearly'>('yearly');
+  const [selectedPlan, setSelectedPlan] = useState<'monthly'>('monthly');
 
   useEffect(() => {
     // Имитация загрузки данных
@@ -31,7 +31,7 @@ const SubscriptionPage = () => {
       // Скрываем кнопку при размонтировании компонента
       webApp?.MainButton?.hide();
     };
-  }, [webApp, isLoading, selectedPlan]);
+  }, [webApp, isLoading]);
 
   const handleSubscribe = () => {
     // В реальном приложении здесь будет интеграция с Telegram Payments
@@ -39,7 +39,7 @@ const SubscriptionPage = () => {
     if (webApp) {
       webApp.showPopup({
         title: 'Оформление подписки',
-        message: `В реальном приложении здесь будет интеграция с Telegram Payments API для оформления ${selectedPlan === 'monthly' ? 'ежемесячной' : 'годовой'} подписки.`,
+        message: `В реальном приложении здесь будет интеграция с Telegram Payments API для оформления ежемесячной подписки.`,
         buttons: [
           { id: 'ok', type: 'ok', text: 'Понятно' }
         ]
@@ -75,24 +75,11 @@ const SubscriptionPage = () => {
     }
   ];
 
-  const plans = [
-    {
-      id: 'monthly',
-      title: 'Ежемесячная',
-      price: 999,
-      period: 'месяц',
-      discount: null,
-      popular: false
-    },
-    {
-      id: 'yearly',
-      title: 'Годовая',
-      price: 9990,
-      period: 'год',
-      discount: '17%',
-      popular: true
-    }
-  ];
+  const plan = {
+    title: 'Ежемесячная',
+    price: 999,
+    period: 'месяц'
+  };
 
   const comparisonTable = [
     {
@@ -161,30 +148,6 @@ const SubscriptionPage = () => {
           Инвестируйте в свое будущее и начните зарабатывать на Wildberries
         </p>
         
-        {/* Переключатель планов */}
-        <div className="flex justify-center mb-6 animate-slide-in-right" style={{ animationDelay: '100ms' }}>
-          <div className="bg-gray-100 dark:bg-gray-800 p-1 rounded-lg flex">
-            {plans.map((plan) => (
-              <button
-                key={plan.id}
-                onClick={() => setSelectedPlan(plan.id as 'monthly' | 'yearly')}
-                className={`px-4 py-2 rounded-md transition-all duration-200 relative ${
-                  selectedPlan === plan.id 
-                    ? 'bg-white dark:bg-gray-700 shadow-sm text-primary font-medium' 
-                    : 'text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-300'
-                }`}
-              >
-                {plan.title}
-                {plan.discount && (
-                  <span className="absolute -top-2 -right-2 bg-accent text-white text-xs px-1.5 py-0.5 rounded-full">
-                    -{plan.discount}
-                  </span>
-                )}
-              </button>
-            ))}
-          </div>
-        </div>
-        
         {/* Карточка плана */}
         <Card 
           variant="primary" 
@@ -193,14 +156,14 @@ const SubscriptionPage = () => {
           <div style={{ animationDelay: '200ms' }}>
             <div className="flex justify-between items-center mb-4">
               <h2 className="text-xl font-semibold">
-                {selectedPlan === 'monthly' ? 'Ежемесячная подписка' : 'Годовая подписка'}
+                Ежемесячная подписка
               </h2>
               <div className="text-right">
                 <span className="text-2xl font-bold text-primary">
-                  {selectedPlan === 'monthly' ? '999 ₽' : '9 990 ₽'}
+                  999 ₽
                 </span>
                 <div className="text-xs text-gray-500 dark:text-gray-400">
-                  за {selectedPlan === 'monthly' ? 'месяц' : 'год'}
+                  за месяц
                 </div>
               </div>
             </div>
@@ -220,7 +183,7 @@ const SubscriptionPage = () => {
             </ul>
             
             <p className="text-sm text-gray-600 dark:text-gray-400 border-t border-gray-200 dark:border-gray-700 pt-4 mt-4">
-              Подписка автоматически продлевается каждый {selectedPlan === 'monthly' ? 'месяц' : 'год'}. Вы можете отменить её в любое время.
+              Подписка автоматически продлевается каждый месяц. Вы можете отменить её в любое время.
             </p>
           </div>
         </Card>
@@ -264,62 +227,43 @@ const SubscriptionPage = () => {
           </div>
         </Card>
         
-        {/* Калькулятор прибыли */}
-        <Card 
-          variant="accent" 
-          className="mb-6 animate-slide-in-right" 
-        >
-          <div style={{ animationDelay: '400ms' }}>
-            <h3 className="text-lg font-semibold mb-2">Рассчитайте свою прибыль</h3>
-            <p className="mb-4 text-sm">
-              Узнайте, сколько вы можете заработать на Wildberries, применяя знания из курса
-            </p>
-            <Button 
-              variant="secondary" 
-              fullWidth
-              onClick={() => navigate('/calculator')}
-              rightIcon={<span>→</span>}
-            >
-              Открыть калькулятор прибыли
-            </Button>
-          </div>
-        </Card>
-        
         {/* Истории успеха */}
-        <Card 
-          variant="default" 
-          className="animate-slide-in-right" 
-        >
-          <div style={{ animationDelay: '500ms' }}>
-            <h3 className="text-lg font-semibold mb-2">Истории успеха наших учеников</h3>
-            <div className="space-y-3">
-              <div className="p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
-                <p className="text-sm italic mb-2">
-                  "Благодаря курсу я вышел на доход 350 000 ₽ в месяц всего за 3 месяца работы с Wildberries"
-                </p>
-                <div className="text-xs text-gray-600 dark:text-gray-400">
-                  — Алексей, продавец товаров для дома
+        <div style={{ animationDelay: '500ms' }}>
+          <Card 
+            variant="default" 
+            className="animate-slide-in-right" 
+          >
+            <div>
+              <h3 className="text-lg font-semibold mb-2">Истории успеха наших учеников</h3>
+              <div className="space-y-3">
+                <div className="p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                  <p className="text-sm italic mb-2">
+                    "Благодаря курсу я вышел на доход 350 000 ₽ в месяц всего за 3 месяца работы с Wildberries"
+                  </p>
+                  <div className="text-xs text-gray-600 dark:text-gray-400">
+                    — Алексей, продавец товаров для дома
+                  </div>
+                </div>
+                <div className="p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                  <p className="text-sm italic mb-2">
+                    "Курс помог мне разобраться во всех нюансах работы с маркетплейсом. Теперь у меня стабильный доход и свободный график"
+                  </p>
+                  <div className="text-xs text-gray-600 dark:text-gray-400">
+                    — Мария, продавец косметики
+                  </div>
                 </div>
               </div>
-              <div className="p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
-                <p className="text-sm italic mb-2">
-                  "Курс помог мне разобраться во всех нюансах работы с маркетплейсом. Теперь у меня стабильный доход и свободный график"
-                </p>
-                <div className="text-xs text-gray-600 dark:text-gray-400">
-                  — Мария, продавец косметики
-                </div>
+              <div className="mt-4 text-center">
+                <Button 
+                  variant="ghost" 
+                  onClick={() => navigate('/success-stories')}
+                >
+                  Больше историй успеха
+                </Button>
               </div>
             </div>
-            <div className="mt-4 text-center">
-              <Button 
-                variant="ghost" 
-                onClick={() => navigate('/success-stories')}
-              >
-                Больше историй успеха
-              </Button>
-            </div>
-          </div>
-        </Card>
+          </Card>
+        </div>
       </div>
       
       <div className="fixed bottom-20 left-0 right-0 p-4 bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-700">
@@ -330,7 +274,7 @@ const SubscriptionPage = () => {
           onClick={handleSubscribe}
           className="animate-pulse-subtle"
         >
-          Оформить подписку за {selectedPlan === 'monthly' ? '999 ₽/месяц' : '9 990 ₽/год'}
+          Оформить подписку за 999 ₽/месяц
         </Button>
       </div>
     </div>

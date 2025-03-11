@@ -3,90 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useWebApp } from '@vkruglikov/react-telegram-web-app';
 import Card from '../components/Card';
 import Button from '../components/Button';
-
-// Временные данные для модулей
-const modulesData = [
-  {
-    id: 1,
-    title: 'Регистрация на Wildberries',
-    description: 'Как правильно зарегистрироваться на маркетплейсе и настроить личный кабинет',
-    lessonsCount: 5,
-    progress: 20,
-    icon: '📝',
-    color: 'bg-blue-500',
-    isFree: true
-  },
-  {
-    id: 2,
-    title: 'Выбор ниши и товара',
-    description: 'Анализ рынка и выбор прибыльной ниши для старта',
-    lessonsCount: 7,
-    progress: 10,
-    icon: '🔍',
-    color: 'bg-green-500',
-    isFree: false
-  },
-  {
-    id: 3,
-    title: 'Поиск поставщиков',
-    description: 'Где и как найти надежных поставщиков для вашего бизнеса',
-    lessonsCount: 6,
-    progress: 0,
-    icon: '🤝',
-    color: 'bg-yellow-500',
-    isFree: false
-  },
-  {
-    id: 4,
-    title: 'Создание карточек товаров',
-    description: 'Как создать продающие карточки товаров на Wildberries',
-    lessonsCount: 8,
-    progress: 0,
-    icon: '📊',
-    color: 'bg-purple-500',
-    isFree: false
-  },
-  {
-    id: 5,
-    title: 'Логистика и поставки',
-    description: 'Организация поставок товаров на склады Wildberries',
-    lessonsCount: 5,
-    progress: 0,
-    icon: '🚚',
-    color: 'bg-red-500',
-    isFree: false
-  },
-  {
-    id: 6,
-    title: 'Аналитика и оптимизация',
-    description: 'Анализ продаж и оптимизация карточек товаров',
-    lessonsCount: 7,
-    progress: 0,
-    icon: '📈',
-    color: 'bg-indigo-500',
-    isFree: false
-  },
-  {
-    id: 7,
-    title: 'Реклама и продвижение',
-    description: 'Стратегии продвижения товаров на Wildberries',
-    lessonsCount: 6,
-    progress: 0,
-    icon: '📣',
-    color: 'bg-pink-500',
-    isFree: false
-  },
-  {
-    id: 8,
-    title: 'Масштабирование бизнеса',
-    description: 'Как расширить ассортимент и увеличить продажи',
-    lessonsCount: 5,
-    progress: 0,
-    icon: '🚀',
-    color: 'bg-teal-500',
-    isFree: false
-  }
-];
+import { modulesData } from '../data/modules';
 
 const ModulesPage = () => {
   const navigate = useNavigate();
@@ -262,10 +179,6 @@ const ModulesPage = () => {
                   <div className="flex-1">
                     <div className="flex items-center justify-between">
                       <h2 className="text-lg font-semibold">{module.title}</h2>
-                      <span className="text-xs bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 py-1 px-2 rounded-full flex items-center">
-                        <span className="mr-1">🔒</span>
-                        По подписке
-                      </span>
                     </div>
                     <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
                       {module.description}
