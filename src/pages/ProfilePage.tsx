@@ -192,22 +192,22 @@ const ProfilePage = () => {
       </Card>
       
       {/* Вкладки */}
-      <div className="flex border-b border-gray-200 dark:border-gray-700 mb-4">
+      <div className="flex mb-4">
         <button
-          className={`py-2 px-4 font-medium transition-colors duration-200 ${
+          className={`flex-1 py-3 px-4 font-medium transition-colors duration-200 border-b-2 ${
             activeTab === 'progress' 
-              ? 'text-primary border-b-2 border-primary' 
-              : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
+              ? 'text-primary border-primary' 
+              : 'text-gray-500 dark:text-gray-400 border-transparent hover:text-gray-700 dark:hover:text-gray-300'
           }`}
           onClick={() => setActiveTab('progress')}
         >
           Прогресс
         </button>
         <button
-          className={`py-2 px-4 font-medium transition-colors duration-200 ${
+          className={`flex-1 py-3 px-4 font-medium transition-colors duration-200 border-b-2 ${
             activeTab === 'achievements' 
-              ? 'text-primary border-b-2 border-primary' 
-              : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
+              ? 'text-primary border-primary' 
+              : 'text-gray-500 dark:text-gray-400 border-transparent hover:text-gray-700 dark:hover:text-gray-300'
           }`}
           onClick={() => setActiveTab('achievements')}
         >
@@ -219,64 +219,64 @@ const ProfilePage = () => {
         <div className="animate-fade-in">
           {/* Прогресс обучения */}
           <Card className="mb-6">
-            <h3 className="text-lg font-semibold mb-3">Прогресс обучения</h3>
-            <div className="mb-4">
-              <div className="flex justify-between text-sm mb-1">
+            <h3 className="text-xl font-bold mb-4">Прогресс обучения</h3>
+            <div className="mb-6">
+              <div className="flex justify-between text-sm mb-2">
                 <span>Общий прогресс</span>
-                <span>{progressPercentage}%</span>
+                <span className="font-semibold">{progressPercentage}%</span>
               </div>
-              <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2.5 overflow-hidden">
+              <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-3 overflow-hidden">
                 <div 
-                  className="bg-primary h-2.5 rounded-full transition-all duration-1000" 
+                  className="bg-primary h-3 rounded-full transition-all duration-1000" 
                   style={{ width: `${progressPercentage}%` }}
                 ></div>
               </div>
             </div>
-            <div className="mb-4">
-              <div className="flex justify-between text-sm mb-1">
+            <div className="mb-6">
+              <div className="flex justify-between text-sm mb-2">
                 <span>Прогресс по модулям</span>
-                <span>{moduleProgressPercentage}%</span>
+                <span className="font-semibold">{moduleProgressPercentage}%</span>
               </div>
-              <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2.5 overflow-hidden">
+              <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-3 overflow-hidden">
                 <div 
-                  className="bg-accent h-2.5 rounded-full transition-all duration-1000" 
+                  className="bg-orange-400 h-3 rounded-full transition-all duration-1000" 
                   style={{ width: `${moduleProgressPercentage}%` }}
                 ></div>
               </div>
             </div>
-            <div className="grid grid-cols-2 gap-4 text-center">
-              <div className="p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
-                <div className="text-2xl font-bold text-primary">
+            <div className="grid grid-cols-2 gap-6 text-center">
+              <div className="p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                <div className="text-4xl font-bold text-primary mb-1">
                   {profile.progress.completedLessons}
-                  <span className="text-gray-400 text-sm">/{profile.progress.totalLessons}</span>
+                  <span className="text-gray-400 text-lg">/{profile.progress.totalLessons}</span>
                 </div>
-                <div className="text-sm text-gray-600 dark:text-gray-400">Уроков пройдено</div>
+                <div className="text-gray-600 dark:text-gray-400">Уроков пройдено</div>
               </div>
-              <div className="p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
-                <div className="text-2xl font-bold text-accent">
+              <div className="p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                <div className="text-4xl font-bold text-orange-400 mb-1">
                   {profile.progress.completedModules}
-                  <span className="text-gray-400 text-sm">/{profile.progress.totalModules}</span>
+                  <span className="text-gray-400 text-lg">/{profile.progress.totalModules}</span>
                 </div>
-                <div className="text-sm text-gray-600 dark:text-gray-400">Модулей завершено</div>
+                <div className="text-gray-600 dark:text-gray-400">Модулей завершено</div>
               </div>
             </div>
           </Card>
           
           {/* Статистика */}
           <Card className="mb-6">
-            <h3 className="text-lg font-semibold mb-3">Статистика</h3>
-            <div className="grid grid-cols-3 gap-2 text-center">
-              <div className="p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
-                <div className="text-xl font-bold text-primary">{profile.statistics.daysActive}</div>
-                <div className="text-xs text-gray-600 dark:text-gray-400">Дней активности</div>
+            <h3 className="text-xl font-bold mb-4">Статистика</h3>
+            <div className="grid grid-cols-3 gap-4 text-center">
+              <div className="p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                <div className="text-4xl font-bold text-primary mb-1">{profile.statistics.daysActive}</div>
+                <div className="text-sm text-gray-600 dark:text-gray-400">Дней<br />активности</div>
               </div>
-              <div className="p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
-                <div className="text-xl font-bold text-primary">{profile.statistics.testsCompleted}</div>
-                <div className="text-xs text-gray-600 dark:text-gray-400">Тестов пройдено</div>
+              <div className="p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                <div className="text-4xl font-bold text-primary mb-1">{profile.statistics.testsCompleted}</div>
+                <div className="text-sm text-gray-600 dark:text-gray-400">Тестов<br />пройдено</div>
               </div>
-              <div className="p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
-                <div className="text-xl font-bold text-primary">{profile.statistics.averageScore}%</div>
-                <div className="text-xs text-gray-600 dark:text-gray-400">Средний балл</div>
+              <div className="p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                <div className="text-4xl font-bold text-primary mb-1">{profile.statistics.averageScore}%</div>
+                <div className="text-sm text-gray-600 dark:text-gray-400">Средний<br />балл</div>
               </div>
             </div>
           </Card>
@@ -286,39 +286,36 @@ const ProfilePage = () => {
       {activeTab === 'achievements' && (
         <div className="animate-fade-in">
           {/* Достижения */}
-          <Card className="mb-6">
-            <h3 className="text-lg font-semibold mb-3">Достижения</h3>
-            <div className="space-y-3">
-              {profile.achievements.map((achievement, index) => (
-                <div 
-                  key={achievement.id}
-                  className={`flex items-center p-3 rounded-lg border transition-all duration-200 animate-slide-in-right ${
+          <div className="space-y-4">
+            {profile.achievements.map((achievement, index) => (
+              <Card 
+                key={achievement.id}
+                variant={achievement.unlocked ? 'primary' : 'default'}
+                className={`transition-all duration-200 animate-slide-in-right ${
+                  !achievement.unlocked && 'opacity-70'
+                }`}
+              >
+                <div className="flex items-center">
+                  <div className={`w-14 h-14 rounded-full flex items-center justify-center mr-4 ${
                     achievement.unlocked 
-                      ? 'border-primary bg-primary/5' 
-                      : 'border-gray-200 dark:border-gray-700 opacity-60'
-                  }`}
-                  style={{ animationDelay: `${index * 100}ms` }}
-                >
-                  <div className={`w-10 h-10 rounded-full flex items-center justify-center mr-3 ${
-                    achievement.unlocked 
-                      ? 'bg-primary text-white' 
+                      ? 'bg-primary/20 text-primary' 
                       : 'bg-gray-200 dark:bg-gray-700 text-gray-500'
                   }`}>
-                    <span className="text-xl">{achievement.icon}</span>
+                    <span className="text-2xl">{achievement.icon}</span>
                   </div>
                   <div className="flex-1">
-                    <div className="font-medium">{achievement.title}</div>
+                    <div className="text-lg font-semibold">{achievement.title}</div>
                     <div className="text-sm text-gray-600 dark:text-gray-400">
                       {achievement.description}
                     </div>
                   </div>
                   {achievement.unlocked && (
-                    <div className="ml-auto text-primary">✓</div>
+                    <div className="ml-auto text-primary text-2xl">✓</div>
                   )}
                 </div>
-              ))}
-            </div>
-          </Card>
+              </Card>
+            ))}
+          </div>
         </div>
       )}
       
