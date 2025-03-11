@@ -7,7 +7,7 @@ declare global {
       NODE_ENV: 'development' | 'production';
       TELEGRAM_BOT_TOKEN: string;
       TELEGRAM_PAYMENT_TOKEN: string;
-      WEBAPP_URL: string;
+      GhjWEBAPP_URL: string;
     }
   }
 }

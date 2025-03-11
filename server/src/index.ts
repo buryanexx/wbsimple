@@ -28,6 +28,21 @@ app.get('/', (req, res) => {
   res.json({ message: 'WB Simple API' });
 });
 
+// Маршрут для корневого пути API
+app.get('/api', (req, res) => {
+  res.json({
+    message: 'WB Simple API работает',
+    version: '1.0.0',
+    endpoints: [
+      '/api/auth',
+      '/api/modules',
+      '/api/lessons',
+      '/api/subscriptions'
+    ],
+    status: 'online'
+  });
+});
+
 // Маршруты API
 app.use('/api/auth', authRoutes);
 app.use('/api/modules', moduleRoutes);
@@ -40,20 +55,19 @@ const startServer = async () => {
     // Проверяем подключение к базе данных
     await testDatabaseConnection();
     
-    // Синхронизируем модели с базой данных (только в режиме разработки)
+    // Синхронизируем модели с базой данных
     await syncModels();
     
-    // Запускаем сервер
+    // Инициализируем Telegram бота
+    telegramService.startBot()
+      .then(() => console.log('Telegram бот запущен'))
+      .catch((error) => console.error('Ошибка запуска Telegram бота:', error));
+    
     app.listen(PORT, () => {
       console.log(`Сервер запущен на порту ${PORT}`);
-      
-      // Запускаем Telegram бота
-      telegramService.startBot()
-        .then(() => console.log('Telegram бот запущен'))
-        .catch((error: Error) => console.error('Ошибка запуска Telegram бота:', error));
     });
   } catch (error) {
-    console.error('Ошибка запуска сервера:', error);
+    console.error('Ошибка при запуске сервера:', error);
     process.exit(1);
   }
 };
