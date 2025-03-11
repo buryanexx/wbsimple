@@ -1,0 +1,36 @@
+# Зависимости
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Скомпилированные файлы
+dist/
+build/
+
+# Переменные окружения
+.env
+.env.local
+.env.development
+.env.test
+.env.production
+
+# Логи
+logs/
+*.log
+
+# Временные файлы
+.DS_Store
+.tmp/
+.temp/
+
+# Файлы IDE
+.idea/
+.vscode/
+*.sublime-project
+*.sublime-workspace
+
+# Другие файлы
+.coverage
+.nyc_output
+coverage/ 
