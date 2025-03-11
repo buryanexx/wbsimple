@@ -3,12 +3,13 @@ import { useNavigate } from 'react-router-dom';
 import { useWebApp } from '@vkruglikov/react-telegram-web-app';
 import Card from '../components/Card';
 import Button from '../components/Button';
+import Icon from '../components/Icon';
 
 const SubscriptionPage = () => {
   const navigate = useNavigate();
   const webApp = useWebApp();
   const [isLoading, setIsLoading] = useState(true);
-  const [selectedPlan, setSelectedPlan] = useState<'monthly' | 'yearly'>('monthly');
+  const [selectedPlan, setSelectedPlan] = useState<'monthly' | 'yearly'>('yearly');
 
   useEffect(() => {
     // Имитация загрузки данных
@@ -50,23 +51,28 @@ const SubscriptionPage = () => {
   const subscriptionFeatures = [
     {
       title: 'Полный доступ ко всем 8 модулям курса',
-      icon: '📚'
+      icon: '📚',
+      description: 'Все материалы курса от регистрации до миллиона рублей'
     },
     {
       title: 'Библиотека шаблонов и фишек для продавцов',
-      icon: '📋'
+      icon: '📋',
+      description: 'Готовые шаблоны для быстрого старта и масштабирования'
     },
     {
       title: 'Доступ в закрытый Telegram-канал',
-      icon: '💬'
+      icon: '💬',
+      description: 'Общение с единомышленниками и обмен опытом'
     },
     {
       title: 'Обновления и новые материалы',
-      icon: '🔄'
+      icon: '🔄',
+      description: 'Регулярные обновления с учетом изменений на маркетплейсе'
     },
     {
       title: 'Поддержка сообщества',
-      icon: '👥'
+      icon: '👥',
+      description: 'Помощь от опытных продавцов и наставников'
     }
   ];
 
@@ -86,6 +92,44 @@ const SubscriptionPage = () => {
       period: 'год',
       discount: '17%',
       popular: true
+    }
+  ];
+
+  const comparisonTable = [
+    {
+      feature: 'Доступ к первому модулю',
+      free: true,
+      premium: true
+    },
+    {
+      feature: 'Базовые шаблоны (3 шт)',
+      free: true,
+      premium: true
+    },
+    {
+      feature: 'Доступ ко всем 8 модулям',
+      free: false,
+      premium: true
+    },
+    {
+      feature: 'Полная библиотека шаблонов (20+ шт)',
+      free: false,
+      premium: true
+    },
+    {
+      feature: 'Закрытый Telegram-канал',
+      free: false,
+      premium: true
+    },
+    {
+      feature: 'Кейсы успешных учеников',
+      free: false,
+      premium: true
+    },
+    {
+      feature: 'Обновления материалов',
+      free: false,
+      premium: true
     }
   ];
 
@@ -110,9 +154,13 @@ const SubscriptionPage = () => {
           Назад
         </Button>
         
-        <h1 className="text-2xl font-bold text-center mb-6 animate-slide-in-right">
+        <h1 className="text-2xl font-bold text-center mb-2 animate-slide-in-right">
           Подписка на WB Simple
         </h1>
+        
+        <p className="text-center text-gray-600 dark:text-gray-400 mb-6 animate-slide-in-right" style={{ animationDelay: '50ms' }}>
+          Инвестируйте в свое будущее и начните зарабатывать на Wildberries
+        </p>
         
         {/* Переключатель планов */}
         <div className="flex justify-center mb-6 animate-slide-in-right" style={{ animationDelay: '100ms' }}>
@@ -164,7 +212,10 @@ const SubscriptionPage = () => {
                   <div className="bg-primary/10 text-primary rounded-full w-8 h-8 flex items-center justify-center mr-3 mt-0.5">
                     <span>{feature.icon}</span>
                   </div>
-                  <span className="pt-1">{feature.title}</span>
+                  <div>
+                    <div className="font-medium">{feature.title}</div>
+                    <div className="text-sm text-gray-600 dark:text-gray-400">{feature.description}</div>
+                  </div>
                 </li>
               ))}
             </ul>
@@ -175,19 +226,98 @@ const SubscriptionPage = () => {
           </div>
         </Card>
         
-        {/* Дополнительная информация */}
+        {/* Сравнение бесплатного и премиум доступа */}
+        <Card 
+          variant="default" 
+          className="mb-6 animate-slide-in-right" 
+        >
+          <div style={{ animationDelay: '300ms' }}>
+            <h3 className="text-lg font-semibold mb-4">Сравнение возможностей</h3>
+            
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead>
+                  <tr className="border-b border-gray-200 dark:border-gray-700">
+                    <th className="text-left py-2">Функция</th>
+                    <th className="text-center py-2">Бесплатно</th>
+                    <th className="text-center py-2">Премиум</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {comparisonTable.map((item, index) => (
+                    <tr key={index} className="border-b border-gray-200 dark:border-gray-700 last:border-0">
+                      <td className="py-3 text-sm">{item.feature}</td>
+                      <td className="py-3 text-center">
+                        {item.free ? 
+                          <span className="text-green-500">✓</span> : 
+                          <span className="text-red-500">✗</span>}
+                      </td>
+                      <td className="py-3 text-center">
+                        {item.premium ? 
+                          <span className="text-green-500">✓</span> : 
+                          <span className="text-red-500">✗</span>}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </Card>
+        
+        {/* Калькулятор прибыли */}
         <Card 
           variant="accent" 
-          className="animate-slide-in-right" 
+          className="mb-6 animate-slide-in-right" 
         >
           <div style={{ animationDelay: '400ms' }}>
-            <h3 className="text-lg font-semibold mb-2">Что вы получаете с подпиской:</h3>
-            <p className="mb-4">
-              Полный доступ к образовательной платформе, которая поможет вам начать зарабатывать на Wildberries с нуля и дойти до 1.000.000 рублей.
+            <h3 className="text-lg font-semibold mb-2">Рассчитайте свою прибыль</h3>
+            <p className="mb-4 text-sm">
+              Узнайте, сколько вы можете заработать на Wildberries, применяя знания из курса
             </p>
-            <div className="flex items-center text-sm text-gray-600 dark:text-gray-400">
-              <span className="mr-2">🔒</span>
-              <span>Оплата производится через Telegram Payments. Ваши данные надежно защищены.</span>
+            <Button 
+              variant="secondary" 
+              fullWidth
+              onClick={() => navigate('/calculator')}
+              rightIcon={<span>→</span>}
+            >
+              Открыть калькулятор прибыли
+            </Button>
+          </div>
+        </Card>
+        
+        {/* Истории успеха */}
+        <Card 
+          variant="default" 
+          className="animate-slide-in-right" 
+        >
+          <div style={{ animationDelay: '500ms' }}>
+            <h3 className="text-lg font-semibold mb-2">Истории успеха наших учеников</h3>
+            <div className="space-y-3">
+              <div className="p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                <p className="text-sm italic mb-2">
+                  "Благодаря курсу я вышел на доход 350 000 ₽ в месяц всего за 3 месяца работы с Wildberries"
+                </p>
+                <div className="text-xs text-gray-600 dark:text-gray-400">
+                  — Алексей, продавец товаров для дома
+                </div>
+              </div>
+              <div className="p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                <p className="text-sm italic mb-2">
+                  "Курс помог мне разобраться во всех нюансах работы с маркетплейсом. Теперь у меня стабильный доход и свободный график"
+                </p>
+                <div className="text-xs text-gray-600 dark:text-gray-400">
+                  — Мария, продавец косметики
+                </div>
+              </div>
+            </div>
+            <div className="mt-4 text-center">
+              <Button 
+                variant="ghost" 
+                onClick={() => navigate('/success-stories')}
+              >
+                Больше историй успеха
+              </Button>
             </div>
           </div>
         </Card>
@@ -199,6 +329,7 @@ const SubscriptionPage = () => {
           size="lg"
           fullWidth
           onClick={handleSubscribe}
+          className="animate-pulse-subtle"
         >
           Оформить подписку за {selectedPlan === 'monthly' ? '999 ₽/месяц' : '9 990 ₽/год'}
         </Button>

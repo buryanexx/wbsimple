@@ -12,6 +12,8 @@ import LessonPage from './pages/LessonPage';
 import ProfilePage from './pages/ProfilePage';
 import TemplatesPage from './pages/TemplatesPage';
 import ChannelPage from './pages/ChannelPage';
+import CalculatorPage from './pages/CalculatorPage';
+import SuccessStoriesPage from './pages/SuccessStoriesPage';
 
 // Импорт компонентов
 import BottomNavigation from './components/BottomNavigation';
@@ -55,6 +57,8 @@ function App() {
                 <Route path="/onboarding" element={<OnboardingPage />} />
                 <Route path="/subscription" element={<SubscriptionPage />} />
                 <Route path="/modules" element={<ModulesPage />} />
+                <Route path="/calculator" element={<CalculatorPage />} />
+                <Route path="/success-stories" element={<SuccessStoriesPage />} />
                 <Route 
                   path="/lesson/:moduleId/:lessonId" 
                   element={

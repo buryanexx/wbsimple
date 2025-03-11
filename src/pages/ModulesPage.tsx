@@ -13,7 +13,8 @@ const modulesData = [
     lessonsCount: 5,
     progress: 20,
     icon: '📝',
-    color: 'bg-blue-500'
+    color: 'bg-blue-500',
+    isFree: true
   },
   {
     id: 2,
@@ -22,7 +23,8 @@ const modulesData = [
     lessonsCount: 7,
     progress: 10,
     icon: '🔍',
-    color: 'bg-green-500'
+    color: 'bg-green-500',
+    isFree: false
   },
   {
     id: 3,
@@ -31,7 +33,8 @@ const modulesData = [
     lessonsCount: 6,
     progress: 0,
     icon: '🤝',
-    color: 'bg-yellow-500'
+    color: 'bg-yellow-500',
+    isFree: false
   },
   {
     id: 4,
@@ -40,7 +43,8 @@ const modulesData = [
     lessonsCount: 8,
     progress: 0,
     icon: '📊',
-    color: 'bg-purple-500'
+    color: 'bg-purple-500',
+    isFree: false
   },
   {
     id: 5,
@@ -49,7 +53,8 @@ const modulesData = [
     lessonsCount: 5,
     progress: 0,
     icon: '🚚',
-    color: 'bg-red-500'
+    color: 'bg-red-500',
+    isFree: false
   },
   {
     id: 6,
@@ -58,7 +63,8 @@ const modulesData = [
     lessonsCount: 7,
     progress: 0,
     icon: '📈',
-    color: 'bg-indigo-500'
+    color: 'bg-indigo-500',
+    isFree: false
   },
   {
     id: 7,
@@ -67,7 +73,8 @@ const modulesData = [
     lessonsCount: 6,
     progress: 0,
     icon: '📣',
-    color: 'bg-pink-500'
+    color: 'bg-pink-500',
+    isFree: false
   },
   {
     id: 8,
@@ -76,7 +83,8 @@ const modulesData = [
     lessonsCount: 5,
     progress: 0,
     icon: '🚀',
-    color: 'bg-teal-500'
+    color: 'bg-teal-500',
+    isFree: false
   }
 ];
 
@@ -109,10 +117,10 @@ const ModulesPage = () => {
     }
   }, [isLoading]);
 
-  // Функция для проверки, доступен ли модуль (для демонстрации)
+  // Функция для проверки, доступен ли модуль
   const isModuleAvailable = (moduleId: number) => {
-    // В реальном приложении здесь будет проверка статуса подписки
-    return moduleId <= 2; // Для демонстрации доступны только первые 2 модуля
+    const module = modulesData.find(m => m.id === moduleId);
+    return module?.isFree || false;
   };
 
   const handleModuleClick = (moduleId: number) => {
@@ -147,6 +155,10 @@ const ModulesPage = () => {
     );
   }
 
+  // Разделяем модули на бесплатные и премиум
+  const freeModules = modulesData.filter(module => module.isFree);
+  const premiumModules = modulesData.filter(module => !module.isFree);
+
   return (
     <div className="p-4 pb-44">
       <div className="flex items-center justify-between mb-6">
@@ -161,57 +173,122 @@ const ModulesPage = () => {
         <div className="w-10"></div> {/* Для выравнивания заголовка по центру */}
       </div>
       
-      <div className="space-y-4">
-        {modulesData.map((module, index) => (
-          <div 
-            key={module.id}
-            className={`transform transition-all duration-300 ${
-              visibleModules.includes(module.id) 
-                ? 'translate-y-0 opacity-100' 
-                : 'translate-y-8 opacity-0'
-            }`}
-            style={{ transitionDelay: `${index * 100}ms` }}
-          >
-            <Card 
-              variant={isModuleAvailable(module.id) ? 'default' : 'outline'}
-              className={`${
-                isModuleAvailable(module.id) 
-                  ? 'hover:shadow-md' 
-                  : 'opacity-70'
+      {/* Бесплатные модули */}
+      <div className="mb-8">
+        <h2 className="text-lg font-semibold mb-4 flex items-center">
+          <span className="bg-primary text-white text-xs py-1 px-2 rounded-full mr-2">Бесплатно</span>
+          Доступные модули
+        </h2>
+        <div className="space-y-4">
+          {freeModules.map((module, index) => (
+            <div 
+              key={module.id}
+              className={`transform transition-all duration-300 ${
+                visibleModules.includes(module.id) 
+                  ? 'translate-y-0 opacity-100' 
+                  : 'translate-y-8 opacity-0'
               }`}
-              onClick={isModuleAvailable(module.id) ? () => handleModuleClick(module.id) : undefined}
+              style={{ transitionDelay: `${index * 100}ms` }}
             >
-              <div className="flex items-start">
-                <div className={`text-white rounded-full w-12 h-12 flex items-center justify-center mr-4 ${module.color}`}>
-                  <span className="text-xl">{module.icon}</span>
-                </div>
-                <div className="flex-1">
-                  <div className="flex items-center justify-between">
-                    <h2 className="text-lg font-semibold">{module.title}</h2>
-                    {!isModuleAvailable(module.id) && (
-                      <span className="text-xs bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 py-1 px-2 rounded-full">
-                        🔒 Требуется подписка
+              <Card 
+                variant="default"
+                className="hover:shadow-md border-l-4 border-primary"
+                onClick={() => handleModuleClick(module.id)}
+              >
+                <div className="flex items-start">
+                  <div className={`text-white rounded-full w-12 h-12 flex items-center justify-center mr-4 ${module.color}`}>
+                    <span className="text-xl">{module.icon}</span>
+                  </div>
+                  <div className="flex-1">
+                    <div className="flex items-center justify-between">
+                      <h2 className="text-lg font-semibold">{module.title}</h2>
+                      <span className="text-xs bg-primary/10 text-primary py-1 px-2 rounded-full flex items-center">
+                        <span className="mr-1">✓</span>
+                        Бесплатно
                       </span>
-                    )}
-                  </div>
-                  <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
-                    {module.description}
-                  </p>
-                  <div className="flex items-center justify-between text-xs text-gray-500 dark:text-gray-400">
-                    <span>{module.lessonsCount} уроков</span>
-                    <span>{module.progress}% завершено</span>
-                  </div>
-                  <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-1.5 mt-2 overflow-hidden">
-                    <div 
-                      className={`h-1.5 rounded-full transition-all duration-1000 ${module.color}`}
-                      style={{ width: `${module.progress}%` }}
-                    ></div>
+                    </div>
+                    <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
+                      {module.description}
+                    </p>
+                    <div className="flex items-center justify-between text-xs text-gray-500 dark:text-gray-400">
+                      <span>{module.lessonsCount} уроков</span>
+                      <span>{module.progress}% завершено</span>
+                    </div>
+                    <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-1.5 mt-2 overflow-hidden">
+                      <div 
+                        className={`h-1.5 rounded-full transition-all duration-1000 ${module.color}`}
+                        style={{ width: `${module.progress}%` }}
+                      ></div>
+                    </div>
                   </div>
                 </div>
-              </div>
-            </Card>
-          </div>
-        ))}
+              </Card>
+            </div>
+          ))}
+        </div>
+      </div>
+      
+      {/* Премиум модули */}
+      <div>
+        <h2 className="text-lg font-semibold mb-4 flex items-center">
+          <span className="bg-accent text-white text-xs py-1 px-2 rounded-full mr-2">Премиум</span>
+          Модули по подписке
+        </h2>
+        <div className="space-y-4">
+          {premiumModules.map((module, index) => (
+            <div 
+              key={module.id}
+              className={`transform transition-all duration-300 ${
+                visibleModules.includes(module.id) 
+                  ? 'translate-y-0 opacity-100' 
+                  : 'translate-y-8 opacity-0'
+              }`}
+              style={{ transitionDelay: `${(index + freeModules.length) * 100}ms` }}
+            >
+              <Card 
+                variant="outline"
+                className="hover:shadow-sm relative overflow-hidden"
+                onClick={() => handleModuleClick(module.id)}
+              >
+                {/* Премиум оверлей */}
+                <div className="absolute top-0 right-0 bg-accent text-white text-xs py-1 px-3 rounded-bl-lg">
+                  Премиум
+                </div>
+                
+                <div className="flex items-start">
+                  <div className={`text-white rounded-full w-12 h-12 flex items-center justify-center mr-4 ${module.color}`}>
+                    <span className="text-xl">{module.icon}</span>
+                  </div>
+                  <div className="flex-1">
+                    <div className="flex items-center justify-between">
+                      <h2 className="text-lg font-semibold">{module.title}</h2>
+                      <span className="text-xs bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 py-1 px-2 rounded-full flex items-center">
+                        <span className="mr-1">🔒</span>
+                        По подписке
+                      </span>
+                    </div>
+                    <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
+                      {module.description}
+                    </p>
+                    <div className="flex items-center justify-between text-xs text-gray-500 dark:text-gray-400">
+                      <span>{module.lessonsCount} уроков</span>
+                      <Button 
+                        variant="outline" 
+                        size="sm"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          navigate('/subscription');
+                        }}
+                      >
+                        Открыть доступ
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              </Card>
+            </div>
+          ))}
+        </div>
       </div>
       
       <div className="mt-8 text-center">
@@ -222,6 +299,9 @@ const ModulesPage = () => {
         >
           Открыть все модули
         </Button>
+        <p className="text-sm text-gray-500 dark:text-gray-400 mt-2">
+          Подписка дает доступ ко всем 8 модулям курса и дополнительным материалам
+        </p>
       </div>
     </div>
   );
