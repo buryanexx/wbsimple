@@ -11,23 +11,108 @@
     -moz-osx-font-smoothing: grayscale;
     margin: 0;
     padding: 0;
+    @apply antialiased text-text-light dark:text-text-dark;
   }
 }
 
 @layer components {
   .tg-button {
-    @apply bg-primary text-white font-medium py-3 px-6 rounded-lg transition-all duration-300;
+    @apply bg-primary text-white py-2 px-4 rounded-lg font-medium shadow-sm hover:bg-primary-dark transition-colors duration-200;
   }
   
   .tg-button-accent {
-    @apply bg-accent text-white font-medium py-3 px-6 rounded-lg transition-all duration-300;
+    @apply bg-accent text-white py-2 px-4 rounded-lg font-medium shadow-sm hover:bg-accent-dark transition-colors duration-200;
   }
   
   .tg-card {
-    @apply bg-white dark:bg-gray-800 rounded-xl shadow-md p-4 transition-all duration-300;
+    @apply bg-white dark:bg-gray-800 rounded-lg p-4 shadow-sm border border-gray-200 dark:border-gray-700;
   }
   
   .tg-input {
     @apply w-full px-4 py-2 border border-gray-300 dark:border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary;
+  }
+}
+
+@layer utilities {
+  /* Анимации */
+  @keyframes fadeIn {
+    from {
+      opacity: 0;
+      transform: translateY(10px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+  
+  @keyframes slideInRight {
+    from {
+      opacity: 0;
+      transform: translateX(20px);
+    }
+    to {
+      opacity: 1;
+      transform: translateX(0);
+    }
+  }
+  
+  @keyframes slideInLeft {
+    from {
+      opacity: 0;
+      transform: translateX(-20px);
+    }
+    to {
+      opacity: 1;
+      transform: translateX(0);
+    }
+  }
+  
+  @keyframes scaleIn {
+    from {
+      opacity: 0;
+      transform: scale(0.9);
+    }
+    to {
+      opacity: 1;
+      transform: scale(1);
+    }
+  }
+  
+  .animate-fade-in {
+    animation: fadeIn 0.5s ease-out forwards;
+  }
+  
+  .animate-slide-in-right {
+    animation: slideInRight 0.5s ease-out forwards;
+  }
+  
+  .animate-slide-in-left {
+    animation: slideInLeft 0.5s ease-out forwards;
+  }
+  
+  .animate-scale-in {
+    animation: scaleIn 0.3s ease-out forwards;
+  }
+  
+  /* Задержки анимаций */
+  .delay-100 {
+    animation-delay: 100ms;
+  }
+  
+  .delay-200 {
+    animation-delay: 200ms;
+  }
+  
+  .delay-300 {
+    animation-delay: 300ms;
+  }
+  
+  .delay-400 {
+    animation-delay: 400ms;
+  }
+  
+  .delay-500 {
+    animation-delay: 500ms;
   }
 }
