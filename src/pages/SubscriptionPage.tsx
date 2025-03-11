@@ -8,7 +8,6 @@ const SubscriptionPage = () => {
   const navigate = useNavigate();
   const webApp = useWebApp();
   const [isLoading, setIsLoading] = useState(true);
-  const [selectedPlan, setSelectedPlan] = useState<'monthly'>('monthly');
 
   useEffect(() => {
     // Имитация загрузки данных
@@ -74,12 +73,6 @@ const SubscriptionPage = () => {
       description: 'Помощь от опытных продавцов и наставников'
     }
   ];
-
-  const plan = {
-    title: 'Ежемесячная',
-    price: 999,
-    period: 'месяц'
-  };
 
   const comparisonTable = [
     {
