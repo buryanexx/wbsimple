@@ -244,23 +244,23 @@ const ProfilePage = () => {
                 ></div>
               </div>
             </div>
-            <div className="grid grid-cols-2 gap-6 text-center">
-              <div className="p-4 bg-gray-50 dark:bg-gray-800 rounded-lg flex flex-col items-center">
-                <div className="text-6xl font-bold text-primary">
-                  <span className="text-primary">{profile.progress.completedLessons}</span>
-                  <span className="text-gray-400 text-2xl">/{profile.progress.totalLessons}</span>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="p-3 bg-gray-50 dark:bg-gray-800 rounded-lg flex flex-col items-center">
+                <div className="flex items-baseline">
+                  <span className="text-4xl font-bold text-primary">{profile.progress.completedLessons}</span>
+                  <span className="text-gray-400 text-lg ml-1">/{profile.progress.totalLessons}</span>
                 </div>
-                <div className="text-gray-600 dark:text-gray-400 mt-1">
-                  Уроков<br />пройдено
+                <div className="text-sm text-gray-600 dark:text-gray-400 mt-1 text-center">
+                  Уроков пройдено
                 </div>
               </div>
-              <div className="p-4 bg-gray-50 dark:bg-gray-800 rounded-lg flex flex-col items-center">
-                <div className="text-6xl font-bold">
-                  <span className="text-orange-400">{profile.progress.completedModules}</span>
-                  <span className="text-gray-400 text-2xl">/{profile.progress.totalModules}</span>
+              <div className="p-3 bg-gray-50 dark:bg-gray-800 rounded-lg flex flex-col items-center">
+                <div className="flex items-baseline">
+                  <span className="text-4xl font-bold text-orange-400">{profile.progress.completedModules}</span>
+                  <span className="text-gray-400 text-lg ml-1">/{profile.progress.totalModules}</span>
                 </div>
-                <div className="text-gray-600 dark:text-gray-400 mt-1">
-                  Модулей<br />завершено
+                <div className="text-sm text-gray-600 dark:text-gray-400 mt-1 text-center">
+                  Модулей завершено
                 </div>
               </div>
             </div>
@@ -269,24 +269,24 @@ const ProfilePage = () => {
           {/* Статистика */}
           <Card className="mb-6">
             <h3 className="text-xl font-bold mb-4">Статистика</h3>
-            <div className="grid grid-cols-3 gap-4">
-              <div className="p-4 bg-gray-50 dark:bg-gray-800 rounded-lg flex flex-col items-center">
-                <div className="text-6xl font-bold text-primary">
+            <div className="grid grid-cols-3 gap-2">
+              <div className="p-3 bg-gray-50 dark:bg-gray-800 rounded-lg flex flex-col items-center">
+                <div className="text-4xl font-bold text-primary">
                   {profile.statistics.daysActive}
                 </div>
-                <div className="text-gray-600 dark:text-gray-400 mt-1">Дней</div>
+                <div className="text-xs text-gray-600 dark:text-gray-400 mt-1 text-center">Дней</div>
               </div>
-              <div className="p-4 bg-gray-50 dark:bg-gray-800 rounded-lg flex flex-col items-center">
-                <div className="text-6xl font-bold text-primary">
+              <div className="p-3 bg-gray-50 dark:bg-gray-800 rounded-lg flex flex-col items-center">
+                <div className="text-4xl font-bold text-primary">
                   {profile.statistics.testsCompleted}
                 </div>
-                <div className="text-gray-600 dark:text-gray-400 mt-1">Тестов</div>
+                <div className="text-xs text-gray-600 dark:text-gray-400 mt-1 text-center">Тестов</div>
               </div>
-              <div className="p-4 bg-gray-50 dark:bg-gray-800 rounded-lg flex flex-col items-center">
-                <div className="text-6xl font-bold text-primary">
+              <div className="p-3 bg-gray-50 dark:bg-gray-800 rounded-lg flex flex-col items-center">
+                <div className="text-4xl font-bold text-primary">
                   {profile.statistics.averageScore}%
                 </div>
-                <div className="text-gray-600 dark:text-gray-400 mt-1">Средний</div>
+                <div className="text-xs text-gray-600 dark:text-gray-400 mt-1 text-center">Средний</div>
               </div>
             </div>
           </Card>
@@ -296,11 +296,11 @@ const ProfilePage = () => {
       {activeTab === 'achievements' && (
         <div className="animate-fade-in">
           {/* Достижения */}
-          <div className="space-y-4">
+          <div className="space-y-3">
             {profile.achievements.map((achievement) => (
               <div 
                 key={achievement.id}
-                className={`p-4 bg-white dark:bg-gray-900 rounded-xl border ${
+                className={`p-3 bg-white dark:bg-gray-900 rounded-lg border ${
                   achievement.unlocked 
                     ? 'border-primary' 
                     : 'border-gray-200 dark:border-gray-700'
@@ -309,21 +309,21 @@ const ProfilePage = () => {
                 }`}
               >
                 <div className="flex items-center">
-                  <div className={`w-14 h-14 rounded-full flex items-center justify-center mr-4 ${
+                  <div className={`w-12 h-12 rounded-full flex items-center justify-center mr-3 ${
                     achievement.unlocked 
                       ? 'bg-primary/20 text-primary' 
                       : 'bg-gray-200 dark:bg-gray-700 text-gray-500'
                   }`}>
-                    <span className="text-2xl">{achievement.icon}</span>
+                    <span className="text-xl">{achievement.icon}</span>
                   </div>
                   <div className="flex-1">
-                    <div className="text-lg font-semibold">{achievement.title}</div>
-                    <div className="text-sm text-gray-600 dark:text-gray-400">
+                    <div className="text-base font-semibold">{achievement.title}</div>
+                    <div className="text-xs text-gray-600 dark:text-gray-400">
                       {achievement.description}
                     </div>
                   </div>
                   {achievement.unlocked && (
-                    <div className="ml-auto text-primary text-2xl">✓</div>
+                    <div className="ml-auto text-primary text-xl">✓</div>
                   )}
                 </div>
               </div>
