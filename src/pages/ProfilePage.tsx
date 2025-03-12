@@ -23,11 +23,6 @@ interface UserProfile {
     icon: string;
     unlocked: boolean;
   }[];
-  statistics: {
-    daysActive: number;
-    testsCompleted: number;
-    averageScore: number;
-  };
 }
 
 const ProfilePage = () => {
@@ -88,12 +83,7 @@ const ProfilePage = () => {
             icon: '🎓',
             unlocked: false
           }
-        ],
-        statistics: {
-          daysActive: 7,
-          testsCompleted: 3,
-          averageScore: 85
-        }
+        ]
       };
       
       setProfile(mockProfile);
@@ -266,29 +256,19 @@ const ProfilePage = () => {
             </div>
           </Card>
           
-          {/* Статистика */}
+          {/* Доступные шаблоны */}
           <Card className="mb-6">
-            <h3 className="text-xl font-bold mb-4">Статистика</h3>
-            <div className="grid grid-cols-3 gap-2">
-              <div className="p-3 bg-gray-50 dark:bg-gray-800 rounded-lg flex flex-col items-center">
-                <div className="text-4xl font-bold text-primary">
-                  {profile.statistics.daysActive}
-                </div>
-                <div className="text-xs text-gray-600 dark:text-gray-400 mt-1 text-center">Дней<br />активности</div>
-              </div>
-              <div className="p-3 bg-gray-50 dark:bg-gray-800 rounded-lg flex flex-col items-center">
-                <div className="text-4xl font-bold text-primary">
-                  {profile.statistics.testsCompleted}
-                </div>
-                <div className="text-xs text-gray-600 dark:text-gray-400 mt-1 text-center">Тестов<br />пройдено</div>
-              </div>
-              <div className="p-3 bg-gray-50 dark:bg-gray-800 rounded-lg flex flex-col items-center">
-                <div className="text-4xl font-bold text-primary">
-                  {profile.statistics.averageScore}%
-                </div>
-                <div className="text-xs text-gray-600 dark:text-gray-400 mt-1 text-center">Средний<br />балл</div>
-              </div>
-            </div>
+            <h3 className="text-xl font-bold mb-4">Доступные шаблоны</h3>
+            <p className="text-gray-600 dark:text-gray-400 mb-4">
+              Шаблоны и чек-листы, которые помогут вам в работе с Wildberries.
+            </p>
+            <Button 
+              variant="primary" 
+              fullWidth
+              onClick={() => navigate('/templates')}
+            >
+              Перейти к шаблонам
+            </Button>
           </Card>
         </div>
       )}

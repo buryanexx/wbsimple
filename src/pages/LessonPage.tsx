@@ -1,9 +1,11 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useWebApp } from '@vkruglikov/react-telegram-web-app';
-import ReactPlayer from 'react-player/lazy';
 import Card from '../components/Card';
 import Button from '../components/Button';
+import SecureVideoPlayer from '../components/SecureVideoPlayer';
+import { modulesData } from '../data/modules';
+import { useAuthContext } from '../contexts/AuthContext';
 
 // Временные данные для уроков
 const lessonsData = {
@@ -12,35 +14,22 @@ const lessonsData = {
       id: 1,
       title: 'Введение в Wildberries',
       description: 'Обзор маркетплейса Wildberries и его преимущества',
-      videoUrl: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ', // Демо-видео
+      videoId: 'video-1-1', // ID видео для получения защищенного URL
       duration: '10:25',
       materials: [
-        { name: 'Презентация "Введение в Wildberries"', url: '#' },
-        { name: 'Чек-лист для начинающих', url: '#' }
-      ],
-      quiz: [
-        {
-          question: 'Какой год основания Wildberries?',
-          options: ['2000', '2004', '2010', '2015'],
-          correctAnswer: 1
-        }
+        { name: 'Презентация "Введение в Wildberries"', url: '#', type: 'presentation' },
+        { name: 'Чек-лист для начинающих', url: '#', type: 'checklist' }
       ]
     },
     {
       id: 2,
       title: 'Регистрация личного кабинета',
       description: 'Пошаговая инструкция по регистрации на Wildberries',
-      videoUrl: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ', // Демо-видео
+      videoId: 'video-1-2', // ID видео для получения защищенного URL
       duration: '15:30',
       materials: [
-        { name: 'Инструкция по регистрации', url: '#' }
-      ],
-      quiz: [
-        {
-          question: 'Какой документ необходим для регистрации на Wildberries?',
-          options: ['Паспорт', 'ИНН', 'СНИЛС', 'Все вышеперечисленное'],
-          correctAnswer: 3
-        }
+        { name: 'Инструкция по регистрации', url: '#', type: 'guide' },
+        { name: 'Чек-лист регистрации', url: '#', type: 'checklist' }
       ]
     }
   ],
@@ -49,18 +38,12 @@ const lessonsData = {
       id: 1,
       title: 'Анализ рынка Wildberries',
       description: 'Как анализировать рынок и находить прибыльные ниши',
-      videoUrl: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ', // Демо-видео
+      videoId: 'video-2-1', // ID видео для получения защищенного URL
       duration: '20:15',
       materials: [
-        { name: 'Таблица для анализа ниши', url: '#' },
-        { name: 'Список популярных категорий', url: '#' }
-      ],
-      quiz: [
-        {
-          question: 'Какой показатель важнее всего при выборе ниши?',
-          options: ['Количество продаж', 'Цена товара', 'Маржинальность', 'Конкуренция'],
-          correctAnswer: 2
-        }
+        { name: 'Таблица для анализа ниши', url: '#', type: 'spreadsheet' },
+        { name: 'Список популярных категорий', url: '#', type: 'document' },
+        { name: 'Чек-лист анализа конкурентов', url: '#', type: 'checklist' }
       ]
     }
   ]
@@ -70,17 +53,28 @@ const LessonPage = () => {
   const { moduleId = '1', lessonId = '1' } = useParams();
   const navigate = useNavigate();
   const webApp = useWebApp();
-  const [activeTab, setActiveTab] = useState<'video' | 'materials' | 'quiz'>('video');
-  const [quizAnswers, setQuizAnswers] = useState<number[]>([]);
-  const [showResults, setShowResults] = useState(false);
+  const { user } = useAuthContext();
+  const [activeTab, setActiveTab] = useState<'video' | 'materials'>('video');
   const [isLoading, setIsLoading] = useState(true);
   const [videoReady, setVideoReady] = useState(false);
+  const [videoError, setVideoError] = useState<string | null>(null);
 
   // Получаем данные урока
   const moduleIdNum = parseInt(moduleId);
   const lessonIdNum = parseInt(lessonId);
   const module = lessonsData[moduleIdNum as keyof typeof lessonsData] || [];
   const lesson = module.find(l => l.id === lessonIdNum);
+  
+  // Проверяем доступность модуля
+  const currentModule = modulesData.find(m => m.id === moduleIdNum);
+  const isModuleAvailable = currentModule?.isFree || (user && user.isSubscribed);
+
+  useEffect(() => {
+    // Если модуль недоступен, перенаправляем на страницу подписки
+    if (!isLoading && !isModuleAvailable) {
+      navigate('/subscription');
+    }
+  }, [isLoading, isModuleAvailable, navigate]);
 
   useEffect(() => {
     // Имитация загрузки данных
@@ -94,27 +88,52 @@ const LessonPage = () => {
   useEffect(() => {
     // Сбрасываем состояние при изменении урока
     setActiveTab('video');
-    setQuizAnswers([]);
-    setShowResults(false);
     setVideoReady(false);
+    setVideoError(null);
     
     // Настраиваем кнопку Telegram
     if (webApp?.MainButton) {
-      if (activeTab === 'quiz') {
-        webApp.MainButton.setText('Проверить ответы');
-        webApp.MainButton.show();
-        webApp.MainButton.onClick(() => {
-          setShowResults(true);
-        });
-      } else {
-        webApp.MainButton.hide();
-      }
+      webApp.MainButton.hide();
     }
     
     return () => {
       webApp?.MainButton?.hide();
     };
-  }, [webApp, moduleId, lessonId, activeTab]);
+  }, [webApp, moduleId, lessonId]);
+
+  // Обработчики событий видеоплеера
+  const handleVideoReady = () => {
+    setVideoReady(true);
+  };
+
+  const handleVideoError = (error: Error) => {
+    setVideoError(error.message);
+    setVideoReady(false);
+  };
+
+  const handleVideoProgress = (progress: { played: number; playedSeconds: number }) => {
+    // Здесь можно добавить логику для отслеживания прогресса просмотра
+    // Например, сохранять позицию для возможности продолжить просмотр позже
+  };
+
+  const handleVideoEnded = () => {
+    // Здесь можно добавить логику для отметки урока как просмотренного
+    // И предложить перейти к следующему уроку
+    if (webApp?.HapticFeedback) {
+      webApp.HapticFeedback.notificationOccurred('success');
+    }
+    
+    if (nextLesson) {
+      // Показываем кнопку для перехода к следующему уроку
+      if (webApp?.MainButton) {
+        webApp.MainButton.setText('Перейти к следующему уроку');
+        webApp.MainButton.show();
+        webApp.MainButton.onClick(() => {
+          navigate(`/lesson/${moduleId}/${nextLesson.id}`);
+        });
+      }
+    }
+  };
 
   if (isLoading) {
     return (
@@ -139,20 +158,26 @@ const LessonPage = () => {
     );
   }
 
-  const handleAnswerSelect = (questionIndex: number, answerIndex: number) => {
-    const newAnswers = [...quizAnswers];
-    newAnswers[questionIndex] = answerIndex;
-    setQuizAnswers(newAnswers);
-  };
-
-  const isAnswerCorrect = (questionIndex: number) => {
-    if (!showResults) return null;
-    const question = lesson.quiz[questionIndex];
-    return quizAnswers[questionIndex] === question.correctAnswer;
-  };
-
   const nextLesson = module.find(l => l.id === lessonIdNum + 1);
   const prevLesson = module.find(l => l.id === lessonIdNum - 1);
+
+  // Функция для получения иконки материала в зависимости от типа
+  const getMaterialIcon = (type: string) => {
+    switch (type) {
+      case 'presentation':
+        return '📊';
+      case 'checklist':
+        return '✅';
+      case 'guide':
+        return '📋';
+      case 'spreadsheet':
+        return '📈';
+      case 'document':
+        return '📄';
+      default:
+        return '📄';
+    }
+  };
 
   return (
     <div className="p-4 pb-44 animate-fade-in">
@@ -190,16 +215,6 @@ const LessonPage = () => {
         >
           Материалы
         </button>
-        <button
-          className={`py-2 px-4 font-medium transition-colors duration-200 ${
-            activeTab === 'quiz' 
-              ? 'text-primary border-b-2 border-primary' 
-              : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
-          }`}
-          onClick={() => setActiveTab('quiz')}
-        >
-          Тест
-        </button>
       </div>
       
       {/* Содержимое вкладок */}
@@ -207,21 +222,13 @@ const LessonPage = () => {
         {activeTab === 'video' && (
           <div className="animate-fade-in">
             <div className="aspect-w-16 aspect-h-9 mb-4 bg-gray-200 dark:bg-gray-800 rounded-lg overflow-hidden relative">
-              {!videoReady && (
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
-                </div>
-              )}
-              <div className={`w-full h-0 pb-[56.25%] relative ${videoReady ? 'opacity-100' : 'opacity-0'}`}>
-                <ReactPlayer
-                  url={lesson.videoUrl}
-                  width="100%"
-                  height="100%"
-                  controls
-                  style={{ position: 'absolute', top: 0, left: 0 }}
-                  onReady={() => setVideoReady(true)}
-                />
-              </div>
+              <SecureVideoPlayer
+                videoId={lesson.videoId}
+                onReady={handleVideoReady}
+                onError={handleVideoError}
+                onProgress={handleVideoProgress}
+                onEnded={handleVideoEnded}
+              />
             </div>
             <Card className="mb-4 animate-slide-in-right">
               <h2 className="text-xl font-semibold mb-2">{lesson.title}</h2>
@@ -249,7 +256,7 @@ const LessonPage = () => {
                         className="flex items-center hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors duration-200"
                         onClick={() => window.open(material.url, '_blank')}
                       >
-                        <span className="text-primary mr-2">📄</span>
+                        <span className="text-primary mr-2">{getMaterialIcon(material.type)}</span>
                         <span>{material.name}</span>
                       </Card>
                     </li>
@@ -259,71 +266,6 @@ const LessonPage = () => {
                 <p className="text-gray-500 dark:text-gray-400">
                   Для этого урока нет дополнительных материалов.
                 </p>
-              )}
-            </Card>
-          </div>
-        )}
-        
-        {activeTab === 'quiz' && (
-          <div className="animate-fade-in">
-            <Card className="mb-4">
-              <h2 className="text-xl font-semibold mb-4">Проверьте свои знания</h2>
-              {lesson.quiz.map((question, qIndex) => (
-                <div key={qIndex} className="mb-6 last:mb-0 animate-slide-in-right" style={{ animationDelay: `${qIndex * 100}ms` }}>
-                  <h3 className="font-medium mb-3">{qIndex + 1}. {question.question}</h3>
-                  <div className="space-y-2">
-                    {question.options.map((option, oIndex) => (
-                      <div 
-                        key={oIndex}
-                        onClick={() => handleAnswerSelect(qIndex, oIndex)}
-                        className={`p-3 rounded-lg border cursor-pointer transition-all duration-200 ${
-                          quizAnswers[qIndex] === oIndex 
-                            ? showResults
-                              ? isAnswerCorrect(qIndex)
-                                ? 'bg-green-100 dark:bg-green-900/30 border-green-500'
-                                : 'bg-red-100 dark:bg-red-900/30 border-red-500'
-                              : 'bg-primary/10 border-primary'
-                            : 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700'
-                        }`}
-                      >
-                        <div className="flex items-center">
-                          <div className={`w-5 h-5 rounded-full border flex items-center justify-center mr-3 ${
-                            quizAnswers[qIndex] === oIndex 
-                              ? showResults
-                                ? isAnswerCorrect(qIndex)
-                                  ? 'border-green-500 bg-green-500 text-white'
-                                  : 'border-red-500 bg-red-500 text-white'
-                                : 'border-primary bg-primary text-white'
-                              : 'border-gray-300 dark:border-gray-600'
-                          }`}>
-                            {quizAnswers[qIndex] === oIndex && (
-                              <span className="text-xs">✓</span>
-                            )}
-                          </div>
-                          <span>{option}</span>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                  {showResults && (
-                    <div className={`mt-2 text-sm ${isAnswerCorrect(qIndex) ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
-                      {isAnswerCorrect(qIndex) 
-                        ? '✅ Правильно!' 
-                        : `❌ Неправильно. Правильный ответ: ${question.options[question.correctAnswer]}`
-                      }
-                    </div>
-                  )}
-                </div>
-              ))}
-              {!showResults && (
-                <Button 
-                  variant="primary" 
-                  className="mt-4"
-                  onClick={() => setShowResults(true)}
-                  disabled={quizAnswers.length !== lesson.quiz.length}
-                >
-                  Проверить ответы
-                </Button>
               )}
             </Card>
           </div>

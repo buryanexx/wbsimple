@@ -29,17 +29,28 @@ export const useAuth = () => {
       setLoading(true);
       setError(null);
 
-      if (!webApp || !webApp.initDataUnsafe || !webApp.initDataUnsafe.user) {
-        throw new Error('Не удалось получить данные пользователя Telegram');
+      if (!webApp || !webApp.initDataUnsafe) {
+        throw new Error('Не удалось получить данные Telegram');
       }
 
-      const telegramData = webApp.initDataUnsafe.user;
+      // Получаем полные данные initData для проверки подписи на сервере
+      const initData = webApp.initData;
+      const telegramUser = webApp.initDataUnsafe.user;
       
-      const response = await authAPI.telegramAuth(telegramData);
+      if (!telegramUser) {
+        throw new Error('Не удалось получить данные пользователя Telegram');
+      }
+      
+      const response = await authAPI.telegramAuth({
+        initData,
+        telegramUser
+      });
+      
       const { token, user } = response.data;
       
-      // Сохраняем токен в localStorage
+      // Сохраняем токен и initData в localStorage
       localStorage.setItem('token', token);
+      localStorage.setItem('telegram_init_data', initData);
       
       setUser(user);
       return user;
@@ -58,12 +69,14 @@ export const useAuth = () => {
       setError(null);
 
       const token = localStorage.getItem('token');
-      if (!token) {
+      const initData = localStorage.getItem('telegram_init_data') || webApp?.initData;
+      
+      if (!token || !initData) {
         setUser(null);
         return null;
       }
 
-      const response = await authAPI.getCurrentUser();
+      const response = await authAPI.getCurrentUser(initData);
       const { user } = response.data;
       
       setUser(user);
@@ -71,6 +84,7 @@ export const useAuth = () => {
     } catch (err: any) {
       setError(err.message || 'Ошибка получения данных пользователя');
       localStorage.removeItem('token');
+      localStorage.removeItem('telegram_init_data');
       setUser(null);
       return null;
     } finally {
@@ -81,6 +95,7 @@ export const useAuth = () => {
   // Функция для выхода из аккаунта
   const logout = () => {
     localStorage.removeItem('token');
+    localStorage.removeItem('telegram_init_data');
     setUser(null);
   };
 
@@ -88,12 +103,13 @@ export const useAuth = () => {
   useEffect(() => {
     const checkAuth = async () => {
       const token = localStorage.getItem('token');
+      const initData = localStorage.getItem('telegram_init_data');
       
-      if (token) {
-        // Если есть токен, получаем данные пользователя
+      if (token && initData) {
+        // Если есть токен и initData, получаем данные пользователя
         await getCurrentUser();
-      } else if (webApp && webApp.initDataUnsafe && webApp.initDataUnsafe.user) {
-        // Если нет токена, но есть данные пользователя Telegram, выполняем аутентификацию
+      } else if (webApp && webApp.initData) {
+        // Если нет токена или initData, но есть данные Telegram, выполняем аутентификацию
         await telegramAuth();
       } else {
         setLoading(false);
@@ -103,13 +119,34 @@ export const useAuth = () => {
     checkAuth();
   }, [webApp]);
 
+  // Функция для проверки, истек ли токен
+  const isTokenExpired = () => {
+    const token = localStorage.getItem('token');
+    if (!token) return true;
+    
+    // Здесь можно добавить логику проверки срока действия токена,
+    // если сервер возвращает информацию о сроке действия
+    
+    return false;
+  };
+
+  // Функция для обновления токена
+  const refreshToken = async () => {
+    if (webApp && webApp.initData) {
+      return await telegramAuth();
+    }
+    return null;
+  };
+
   return {
     user,
     loading,
     error,
     telegramAuth,
     getCurrentUser,
-    logout
+    logout,
+    isTokenExpired,
+    refreshToken
   };
 };
 

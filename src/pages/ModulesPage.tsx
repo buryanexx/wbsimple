@@ -34,15 +34,12 @@ const ModulesPage = () => {
     }
   }, [isLoading]);
 
-  // Функция для проверки, доступен ли модуль
-  const isModuleAvailable = (moduleId: number) => {
-    const module = modulesData.find(m => m.id === moduleId);
-    return module?.isFree || false;
-  };
-
   const handleModuleClick = (moduleId: number) => {
-    if (isModuleAvailable(moduleId)) {
-      // Переход к урокам модуля
+    // Находим модуль по ID
+    const module = modulesData.find(m => m.id === moduleId);
+    
+    if (module && module.isFree) {
+      // Если модуль бесплатный, переходим к урокам модуля
       navigate(`/lesson/${moduleId}/1`);
     } else {
       // Показываем уведомление о необходимости подписки

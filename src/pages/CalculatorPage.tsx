@@ -4,26 +4,136 @@ import { useWebApp } from '@vkruglikov/react-telegram-web-app';
 import Card from '../components/Card';
 import Button from '../components/Button';
 
+// Структура данных для калькулятора
+interface ProfitCalculatorData {
+  // Основные параметры товара
+  purchasePrice: number;         // Закупочная цена за единицу
+  sellingPrice: number;          // Цена продажи на Wildberries
+  quantity: number;              // Количество товара в партии
+  
+  // Комиссии и расходы
+  wbCommissionPercent: number;   // Комиссия Wildberries (%)
+  logisticsCost: number;         // Стоимость логистики за единицу
+  packagingCost: number;         // Стоимость упаковки за единицу
+  additionalCosts: number;       // Дополнительные расходы на всю партию
+  
+  // Налоги
+  taxSystemType: 'osn' | 'usn_income' | 'usn_income_minus_expenses' | 'patent'; // Тип налогообложения
+  
+  // Прогнозы
+  selloutPercentage: number;     // Процент выкупа (%)
+  selloutPeriod: number;         // Период реализации (дней)
+}
+
+// Функция расчета прибыли
+const calculateProfit = (data: ProfitCalculatorData) => {
+  // Расчет количества проданных единиц
+  const soldUnits = Math.round(data.quantity * (data.selloutPercentage / 100));
+  
+  // Расчет выручки
+  const totalRevenue = soldUnits * data.sellingPrice;
+  
+  // Расчет комиссии Wildberries
+  const wbCommission = totalRevenue * (data.wbCommissionPercent / 100);
+  
+  // Расчет себестоимости
+  const costPrice = data.purchasePrice * data.quantity;
+  
+  // Расчет логистики и упаковки
+  const logistics = data.logisticsCost * data.quantity;
+  const packaging = data.packagingCost * data.quantity;
+  
+  // Расчет общих расходов
+  const totalExpenses = costPrice + logistics + packaging + data.additionalCosts;
+  
+  // Расчет валовой прибыли
+  const grossProfit = totalRevenue - wbCommission - totalExpenses;
+  
+  // Расчет налогов в зависимости от системы налогообложения
+  let tax = 0;
+  switch (data.taxSystemType) {
+    case 'osn':
+      tax = grossProfit > 0 ? grossProfit * 0.2 : 0; // НДС 20%
+      break;
+    case 'usn_income':
+      tax = totalRevenue * 0.06; // УСН 6% от дохода
+      break;
+    case 'usn_income_minus_expenses':
+      tax = grossProfit > 0 ? grossProfit * 0.15 : 0; // УСН 15% от прибыли
+      break;
+    case 'patent':
+      // Для патента налог фиксированный, но зависит от региона и вида деятельности
+      tax = 0;
+      break;
+  }
+  
+  // Расчет чистой прибыли
+  const netProfit = grossProfit - tax;
+  
+  // Расчет ROI (Return on Investment)
+  const roi = totalExpenses > 0 ? (netProfit / totalExpenses) * 100 : 0;
+  
+  // Расчет маржинальности
+  const margin = totalRevenue > 0 ? (netProfit / totalRevenue) * 100 : 0;
+  
+  // Расчет прибыли на единицу товара
+  const profitPerUnit = soldUnits > 0 ? netProfit / soldUnits : 0;
+  
+  // Расчет точки безубыточности (сколько нужно продать, чтобы выйти в ноль)
+  const breakEvenUnits = Math.ceil(
+    totalExpenses / (data.sellingPrice - (data.sellingPrice * (data.wbCommissionPercent / 100)))
+  );
+  
+  // Расчет срока окупаемости (в днях)
+  const returnOnInvestmentDays = 
+    soldUnits > 0 ? 
+    Math.ceil((breakEvenUnits / soldUnits) * data.selloutPeriod) : 
+    Infinity;
+  
+  return {
+    // Основные показатели
+    totalRevenue,
+    wbCommission,
+    totalExpenses,
+    grossProfit,
+    tax,
+    netProfit,
+    
+    // Аналитические показатели
+    roi,
+    margin,
+    profitPerUnit,
+    breakEvenUnits,
+    returnOnInvestmentDays,
+    
+    // Прогнозы
+    soldUnits,
+    unsoldUnits: data.quantity - soldUnits
+  };
+};
+
 const CalculatorPage = () => {
   const navigate = useNavigate();
   const webApp = useWebApp();
   const [isLoading, setIsLoading] = useState(true);
   
-  // Состояние для полей калькулятора
-  const [productCost, setProductCost] = useState<number>(1000);
-  const [sellingPrice, setSellingPrice] = useState<number>(2500);
-  const [monthlyVolume, setMonthlyVolume] = useState<number>(100);
-  const [commissionRate, setCommissionRate] = useState<number>(15);
-  const [logisticsCost, setLogisticsCost] = useState<number>(200);
-  const [advertisingCost, setAdvertisingCost] = useState<number>(10000);
+  // Состояние для хранения данных калькулятора
+  const [calculatorData, setCalculatorData] = useState<ProfitCalculatorData>({
+    purchasePrice: 500,
+    sellingPrice: 1500,
+    quantity: 100,
+    wbCommissionPercent: 15,
+    logisticsCost: 50,
+    packagingCost: 20,
+    additionalCosts: 5000,
+    taxSystemType: 'usn_income_minus_expenses',
+    selloutPercentage: 80,
+    selloutPeriod: 30
+  });
   
-  // Результаты расчетов
-  const [grossRevenue, setGrossRevenue] = useState<number>(0);
-  const [totalCosts, setTotalCosts] = useState<number>(0);
-  const [netProfit, setNetProfit] = useState<number>(0);
-  const [profitMargin, setProfitMargin] = useState<number>(0);
-  const [roi, setRoi] = useState<number>(0);
-
+  // Состояние для хранения результатов расчета
+  const [results, setResults] = useState<ReturnType<typeof calculateProfit> | null>(null);
+  
   useEffect(() => {
     // Имитация загрузки данных
     const timer = setTimeout(() => {
@@ -47,39 +157,20 @@ const CalculatorPage = () => {
     };
   }, [webApp, isLoading, navigate]);
 
-  // Расчет прибыли при изменении любого из параметров
-  useEffect(() => {
-    // Валовая выручка
-    const calculatedGrossRevenue = sellingPrice * monthlyVolume;
-    
-    // Комиссия маркетплейса
-    const marketplaceCommission = (sellingPrice * commissionRate / 100) * monthlyVolume;
-    
-    // Общие затраты на логистику
-    const totalLogistics = logisticsCost * monthlyVolume;
-    
-    // Общие затраты на товар
-    const totalProductCost = productCost * monthlyVolume;
-    
-    // Общие затраты
-    const calculatedTotalCosts = totalProductCost + marketplaceCommission + totalLogistics + advertisingCost;
-    
-    // Чистая прибыль
-    const calculatedNetProfit = calculatedGrossRevenue - calculatedTotalCosts;
-    
-    // Маржа прибыли (%)
-    const calculatedProfitMargin = (calculatedNetProfit / calculatedGrossRevenue) * 100;
-    
-    // ROI (%)
-    const calculatedRoi = (calculatedNetProfit / calculatedTotalCosts) * 100;
-    
-    // Обновляем состояние
-    setGrossRevenue(calculatedGrossRevenue);
-    setTotalCosts(calculatedTotalCosts);
-    setNetProfit(calculatedNetProfit);
-    setProfitMargin(calculatedProfitMargin);
-    setRoi(calculatedRoi);
-  }, [productCost, sellingPrice, monthlyVolume, commissionRate, logisticsCost, advertisingCost]);
+  // Обработчик изменения полей ввода
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+    const { name, value } = e.target;
+    setCalculatorData(prev => ({
+      ...prev,
+      [name]: name === 'taxSystemType' ? value : Number(value)
+    }));
+  };
+  
+  // Функция расчета прибыли
+  const handleCalculate = () => {
+    const result = calculateProfit(calculatorData);
+    setResults(result);
+  };
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('ru-RU', {
@@ -106,205 +197,226 @@ const CalculatorPage = () => {
   }
 
   return (
-    <div className="flex flex-col items-center justify-center p-4 space-y-6 pb-44 animate-fade-in">
-      <div className="w-full max-w-md">
-        <Button 
-          variant="ghost" 
-          onClick={() => navigate(-1)}
-          leftIcon={<span className="text-lg">←</span>}
-          className="mb-4"
-        >
-          Назад
-        </Button>
+    <div className="container mx-auto px-4 py-8 pb-44">
+      <h1 className="text-2xl font-bold mb-6">Калькулятор прибыли на Wildberries</h1>
+      
+      <div className="bg-white dark:bg-gray-800 rounded-lg p-4 shadow-sm mb-6">
+        <h2 className="text-xl font-semibold mb-4">Параметры расчета</h2>
         
-        <h1 className="text-2xl font-bold text-center mb-2 animate-slide-in-right">
-          Калькулятор прибыли
-        </h1>
-        
-        <p className="text-center text-gray-600 dark:text-gray-400 mb-6 animate-slide-in-right" style={{ animationDelay: '50ms' }}>
-          Рассчитайте потенциальную прибыль от продаж на Wildberries
-        </p>
-        
-        {/* Ввод данных */}
-        <Card 
-          variant="default" 
-          className="mb-6 animate-slide-in-right" 
-        >
-          <div style={{ animationDelay: '100ms' }}>
-            <h2 className="text-lg font-semibold mb-4">Параметры расчета</h2>
-            
-            <div className="space-y-4">
+        <div className="space-y-4">
+          {/* Основные параметры товара */}
+          <div>
+            <h3 className="font-medium mb-2">Информация о товаре</h3>
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  Себестоимость товара (₽)
-                </label>
+                <label className="block text-sm mb-1">Закупочная цена (₽)</label>
                 <input
                   type="number"
-                  min="1"
-                  value={productCost}
-                  onChange={(e) => setProductCost(Number(e.target.value))}
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary dark:bg-gray-700"
+                  name="purchasePrice"
+                  value={calculatorData.purchasePrice}
+                  onChange={handleInputChange}
+                  className="w-full px-3 py-2 border rounded-lg"
                 />
               </div>
-              
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  Цена продажи (₽)
-                </label>
+                <label className="block text-sm mb-1">Цена продажи (₽)</label>
                 <input
                   type="number"
-                  min="1"
-                  value={sellingPrice}
-                  onChange={(e) => setSellingPrice(Number(e.target.value))}
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary dark:bg-gray-700"
+                  name="sellingPrice"
+                  value={calculatorData.sellingPrice}
+                  onChange={handleInputChange}
+                  className="w-full px-3 py-2 border rounded-lg"
                 />
               </div>
-              
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  Объем продаж в месяц (шт)
-                </label>
+                <label className="block text-sm mb-1">Количество товара (шт)</label>
                 <input
                   type="number"
-                  min="1"
-                  value={monthlyVolume}
-                  onChange={(e) => setMonthlyVolume(Number(e.target.value))}
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary dark:bg-gray-700"
-                />
-              </div>
-              
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  Комиссия Wildberries (%)
-                </label>
-                <input
-                  type="number"
-                  min="0"
-                  max="100"
-                  value={commissionRate}
-                  onChange={(e) => setCommissionRate(Number(e.target.value))}
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary dark:bg-gray-700"
-                />
-              </div>
-              
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  Стоимость логистики за единицу (₽)
-                </label>
-                <input
-                  type="number"
-                  min="0"
-                  value={logisticsCost}
-                  onChange={(e) => setLogisticsCost(Number(e.target.value))}
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary dark:bg-gray-700"
-                />
-              </div>
-              
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  Расходы на рекламу в месяц (₽)
-                </label>
-                <input
-                  type="number"
-                  min="0"
-                  value={advertisingCost}
-                  onChange={(e) => setAdvertisingCost(Number(e.target.value))}
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary dark:bg-gray-700"
+                  name="quantity"
+                  value={calculatorData.quantity}
+                  onChange={handleInputChange}
+                  className="w-full px-3 py-2 border rounded-lg"
                 />
               </div>
             </div>
           </div>
-        </Card>
-        
-        {/* Результаты расчета */}
-        <Card 
-          variant="primary" 
-          className="mb-6 animate-slide-in-right" 
-        >
-          <div style={{ animationDelay: '200ms' }}>
-            <h2 className="text-lg font-semibold mb-4">Результаты расчета</h2>
-            
-            <div className="space-y-4">
-              <div className="flex justify-between items-center pb-2 border-b border-gray-200 dark:border-gray-700">
-                <span className="text-gray-600 dark:text-gray-400">Валовая выручка:</span>
-                <span className="font-semibold">{formatCurrency(grossRevenue)}</span>
+          
+          {/* Комиссии и расходы */}
+          <div>
+            <h3 className="font-medium mb-2">Комиссии и расходы</h3>
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <div>
+                <label className="block text-sm mb-1">Комиссия Wildberries (%)</label>
+                <input
+                  type="number"
+                  name="wbCommissionPercent"
+                  value={calculatorData.wbCommissionPercent}
+                  onChange={handleInputChange}
+                  className="w-full px-3 py-2 border rounded-lg"
+                />
               </div>
-              
-              <div className="flex justify-between items-center pb-2 border-b border-gray-200 dark:border-gray-700">
-                <span className="text-gray-600 dark:text-gray-400">Общие затраты:</span>
-                <span className="font-semibold">{formatCurrency(totalCosts)}</span>
+              <div>
+                <label className="block text-sm mb-1">Стоимость логистики (₽/шт)</label>
+                <input
+                  type="number"
+                  name="logisticsCost"
+                  value={calculatorData.logisticsCost}
+                  onChange={handleInputChange}
+                  className="w-full px-3 py-2 border rounded-lg"
+                />
               </div>
-              
-              <div className="flex justify-between items-center pb-2 border-b border-gray-200 dark:border-gray-700">
-                <span className="text-gray-600 dark:text-gray-400">Чистая прибыль:</span>
-                <span className={`font-bold ${netProfit >= 0 ? 'text-green-500' : 'text-red-500'}`}>
-                  {formatCurrency(netProfit)}
-                </span>
+              <div>
+                <label className="block text-sm mb-1">Стоимость упаковки (₽/шт)</label>
+                <input
+                  type="number"
+                  name="packagingCost"
+                  value={calculatorData.packagingCost}
+                  onChange={handleInputChange}
+                  className="w-full px-3 py-2 border rounded-lg"
+                />
               </div>
-              
-              <div className="flex justify-between items-center pb-2 border-b border-gray-200 dark:border-gray-700">
-                <span className="text-gray-600 dark:text-gray-400">Маржа прибыли:</span>
-                <span className={`font-semibold ${profitMargin >= 0 ? 'text-green-500' : 'text-red-500'}`}>
-                  {formatPercent(profitMargin)}
-                </span>
-              </div>
-              
-              <div className="flex justify-between items-center">
-                <span className="text-gray-600 dark:text-gray-400">ROI:</span>
-                <span className={`font-semibold ${roi >= 0 ? 'text-green-500' : 'text-red-500'}`}>
-                  {formatPercent(roi)}
-                </span>
+              <div>
+                <label className="block text-sm mb-1">Дополнительные расходы (₽)</label>
+                <input
+                  type="number"
+                  name="additionalCosts"
+                  value={calculatorData.additionalCosts}
+                  onChange={handleInputChange}
+                  className="w-full px-3 py-2 border rounded-lg"
+                />
               </div>
             </div>
           </div>
-        </Card>
-        
-        {/* Советы по увеличению прибыли */}
-        <Card 
-          variant="accent" 
-          className="animate-slide-in-right" 
-        >
-          <div style={{ animationDelay: '300ms' }}>
-            <h2 className="text-lg font-semibold mb-2">Как увеличить прибыль?</h2>
-            
-            <ul className="space-y-2 text-sm">
-              <li className="flex items-start">
-                <span className="text-accent mr-2">•</span>
-                <span>Оптимизируйте закупочную цену, найдя более выгодных поставщиков</span>
-              </li>
-              <li className="flex items-start">
-                <span className="text-accent mr-2">•</span>
-                <span>Улучшите качество фото и описаний для повышения конверсии</span>
-              </li>
-              <li className="flex items-start">
-                <span className="text-accent mr-2">•</span>
-                <span>Работайте над SEO-оптимизацией карточек товаров</span>
-              </li>
-              <li className="flex items-start">
-                <span className="text-accent mr-2">•</span>
-                <span>Анализируйте эффективность рекламных кампаний</span>
-              </li>
-              <li className="flex items-start">
-                <span className="text-accent mr-2">•</span>
-                <span>Используйте стратегии ценообразования из нашего курса</span>
-              </li>
-            </ul>
-            
-            <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
-              <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
-                Хотите узнать больше стратегий для увеличения прибыли на Wildberries?
-              </p>
-              <Button 
-                variant="primary" 
-                fullWidth
-                onClick={() => navigate('/subscription')}
+          
+          {/* Налоги */}
+          <div>
+            <h3 className="font-medium mb-2">Налогообложение</h3>
+            <div>
+              <label className="block text-sm mb-1">Система налогообложения</label>
+              <select
+                name="taxSystemType"
+                value={calculatorData.taxSystemType}
+                onChange={handleInputChange}
+                className="w-full px-3 py-2 border rounded-lg"
               >
-                Получить доступ к полному курсу
-              </Button>
+                <option value="osn">ОСН (НДС 20%)</option>
+                <option value="usn_income">УСН Доходы (6%)</option>
+                <option value="usn_income_minus_expenses">УСН Доходы-Расходы (15%)</option>
+                <option value="patent">Патент</option>
+              </select>
             </div>
           </div>
-        </Card>
+          
+          {/* Прогнозы */}
+          <div>
+            <h3 className="font-medium mb-2">Прогнозы продаж</h3>
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <div>
+                <label className="block text-sm mb-1">Процент выкупа (%)</label>
+                <input
+                  type="number"
+                  name="selloutPercentage"
+                  value={calculatorData.selloutPercentage}
+                  onChange={handleInputChange}
+                  className="w-full px-3 py-2 border rounded-lg"
+                />
+              </div>
+              <div>
+                <label className="block text-sm mb-1">Период реализации (дней)</label>
+                <input
+                  type="number"
+                  name="selloutPeriod"
+                  value={calculatorData.selloutPeriod}
+                  onChange={handleInputChange}
+                  className="w-full px-3 py-2 border rounded-lg"
+                />
+              </div>
+            </div>
+          </div>
+          
+          <button
+            onClick={handleCalculate}
+            className="w-full bg-primary text-white py-3 rounded-lg font-medium"
+          >
+            Рассчитать прибыль
+          </button>
+        </div>
       </div>
+      
+      {results && (
+        <div className="bg-white dark:bg-gray-800 rounded-lg p-4 shadow-sm">
+          <h2 className="text-xl font-semibold mb-4">Результаты расчета</h2>
+          
+          <div className="space-y-4">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <div className="p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                <p className="text-sm text-gray-500 dark:text-gray-400">Выручка</p>
+                <p className="text-lg font-semibold">{results.totalRevenue.toLocaleString()} ₽</p>
+              </div>
+              <div className="p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                <p className="text-sm text-gray-500 dark:text-gray-400">Комиссия WB</p>
+                <p className="text-lg font-semibold">{results.wbCommission.toLocaleString()} ₽</p>
+              </div>
+              <div className="p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                <p className="text-sm text-gray-500 dark:text-gray-400">Общие расходы</p>
+                <p className="text-lg font-semibold">{results.totalExpenses.toLocaleString()} ₽</p>
+              </div>
+              <div className="p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                <p className="text-sm text-gray-500 dark:text-gray-400">Налоги</p>
+                <p className="text-lg font-semibold">{results.tax.toLocaleString()} ₽</p>
+              </div>
+              <div className="p-3 bg-primary bg-opacity-10 rounded-lg col-span-1 sm:col-span-2">
+                <p className="text-sm text-primary">Чистая прибыль</p>
+                <p className="text-xl font-bold text-primary">{results.netProfit.toLocaleString()} ₽</p>
+              </div>
+            </div>
+            
+            <div>
+              <h3 className="font-medium mb-2">Аналитические показатели</h3>
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <div className="p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                  <p className="text-sm text-gray-500 dark:text-gray-400">ROI (окупаемость инвестиций)</p>
+                  <p className="text-lg font-semibold">{results.roi.toFixed(2)}%</p>
+                </div>
+                <div className="p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                  <p className="text-sm text-gray-500 dark:text-gray-400">Маржинальность</p>
+                  <p className="text-lg font-semibold">{results.margin.toFixed(2)}%</p>
+                </div>
+                <div className="p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                  <p className="text-sm text-gray-500 dark:text-gray-400">Прибыль на единицу товара</p>
+                  <p className="text-lg font-semibold">{results.profitPerUnit.toFixed(2)} ₽</p>
+                </div>
+                <div className="p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                  <p className="text-sm text-gray-500 dark:text-gray-400">Точка безубыточности</p>
+                  <p className="text-lg font-semibold">{results.breakEvenUnits} шт.</p>
+                </div>
+              </div>
+            </div>
+            
+            <div>
+              <h3 className="font-medium mb-2">Прогноз продаж</h3>
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <div className="p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                  <p className="text-sm text-gray-500 dark:text-gray-400">Прогноз проданных единиц</p>
+                  <p className="text-lg font-semibold">{results.soldUnits} шт.</p>
+                </div>
+                <div className="p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                  <p className="text-sm text-gray-500 dark:text-gray-400">Прогноз остатков</p>
+                  <p className="text-lg font-semibold">{results.unsoldUnits} шт.</p>
+                </div>
+                <div className="p-3 bg-gray-50 dark:bg-gray-700 rounded-lg col-span-1 sm:col-span-2">
+                  <p className="text-sm text-gray-500 dark:text-gray-400">Срок окупаемости</p>
+                  <p className="text-lg font-semibold">
+                    {results.returnOnInvestmentDays === Infinity 
+                      ? 'Не окупится при текущих параметрах' 
+                      : `${results.returnOnInvestmentDays} дней`}
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

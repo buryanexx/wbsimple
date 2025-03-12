@@ -15,9 +15,16 @@ const api = axios.create({
 api.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem('token');
+    const initData = localStorage.getItem('telegram_init_data');
+    
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
+    
+    if (initData && !config.headers['X-Telegram-Init-Data']) {
+      config.headers['X-Telegram-Init-Data'] = initData;
+    }
+    
     return config;
   },
   (error) => Promise.reject(error)
@@ -39,10 +46,12 @@ api.interceptors.response.use(
 // API для аутентификации
 export const authAPI = {
   // Аутентификация через Telegram
-  telegramAuth: (telegramData: any) => api.post('/auth/telegram', { telegramData }),
+  telegramAuth: (data: { initData: string, telegramUser: any }) => api.post('/auth/telegram', data),
   
   // Получение данных текущего пользователя
-  getCurrentUser: () => api.get('/auth/me')
+  getCurrentUser: (initData?: string) => api.get('/auth/me', {
+    headers: initData ? { 'X-Telegram-Init-Data': initData } : undefined
+  })
 };
 
 // API для модулей
@@ -99,10 +108,23 @@ export const subscriptionsAPI = {
   enableAutoRenewal: () => api.post('/subscriptions/enable-auto-renewal')
 };
 
+// API для видео
+export const videosAPI = {
+  // Получение защищенного URL для видео
+  getSecureVideoUrl: (videoId: string) => api.get(`/videos/${videoId}/secure-url`),
+  
+  // Отметка видео как просмотренного
+  markVideoAsWatched: (videoId: string, progress: number) => api.post(`/videos/${videoId}/watched`, { progress }),
+  
+  // Получение прогресса просмотра видео
+  getVideoProgress: (videoId: string) => api.get(`/videos/${videoId}/progress`)
+};
+
 export default {
   authAPI,
   modulesAPI,
   lessonsAPI,
   templatesAPI,
-  subscriptionsAPI
+  subscriptionsAPI,
+  videosAPI
 }; 

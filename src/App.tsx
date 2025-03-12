@@ -14,6 +14,7 @@ import TemplatesPage from './pages/TemplatesPage';
 import ChannelPage from './pages/ChannelPage';
 import CalculatorPage from './pages/CalculatorPage';
 import SuccessStoriesPage from './pages/SuccessStoriesPage';
+import TimelinePage from './pages/TimelinePage';
 
 // Импорт компонентов
 import BottomNavigation from './components/BottomNavigation';
@@ -58,14 +59,11 @@ function App() {
                 <Route path="/subscription" element={<SubscriptionPage />} />
                 <Route path="/modules" element={<ModulesPage />} />
                 <Route path="/calculator" element={<CalculatorPage />} />
+                <Route path="/timeline" element={<TimelinePage />} />
                 <Route path="/success-stories" element={<SuccessStoriesPage />} />
                 <Route 
                   path="/lesson/:moduleId/:lessonId" 
-                  element={
-                    <ProtectedRoute>
-                      <LessonPage />
-                    </ProtectedRoute>
-                  } 
+                  element={<LessonPage />} 
                 />
                 <Route path="/profile" element={<ProfilePage />} />
                 <Route path="/templates" element={<TemplatesPage />} />
