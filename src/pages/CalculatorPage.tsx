@@ -1,8 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useWebApp } from '@vkruglikov/react-telegram-web-app';
-import Card from '../components/Card';
-import Button from '../components/Button';
 
 // Структура данных для калькулятора
 interface ProfitCalculatorData {
@@ -170,21 +168,6 @@ const CalculatorPage = () => {
   const handleCalculate = () => {
     const result = calculateProfit(calculatorData);
     setResults(result);
-  };
-
-  const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat('ru-RU', {
-      style: 'currency',
-      currency: 'RUB',
-      maximumFractionDigits: 0
-    }).format(value);
-  };
-
-  const formatPercent = (value: number) => {
-    return new Intl.NumberFormat('ru-RU', {
-      style: 'percent',
-      maximumFractionDigits: 1
-    }).format(value / 100);
   };
 
   if (isLoading) {

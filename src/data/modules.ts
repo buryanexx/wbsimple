@@ -4,9 +4,16 @@ export interface Lesson {
   title: string;
   description: string;
   videoUrl?: string;
+  videoId?: string;
   content?: string;
   duration: number; // в минутах
   isCompleted?: boolean;
+  materials?: {
+    title: string;
+    description: string;
+    url: string;
+    type: string;
+  }[];
 }
 
 export interface Module {

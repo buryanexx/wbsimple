@@ -140,11 +140,9 @@ const SecureVideoPlayer: React.FC<SecureVideoPlayerProps> = ({
         controls
         playing
         onReady={onReady}
-        onError={(e) => {
-          setError('Ошибка воспроизведения видео');
-          if (onError) {
-            onError(new Error('Ошибка воспроизведения видео'));
-          }
+        onError={() => {
+          setError('Ошибка при загрузке видео');
+          setIsLoading(false);
         }}
         onProgress={onProgress}
         onEnded={onEnded}
