@@ -3,11 +3,14 @@ import { useNavigate } from 'react-router-dom';
 import { useWebApp } from '@vkruglikov/react-telegram-web-app';
 import Card from '../components/Card';
 import Button from '../components/Button';
+import UserStatus from '../components/UserStatus';
+import { useSubscription } from '../hooks/useSubscription';
 import { modulesData } from '../data/modules';
 
 const ModulesPage = () => {
   const navigate = useNavigate();
   const webApp = useWebApp();
+  const { hasAccess, subscription } = useSubscription();
   const [isLoading, setIsLoading] = useState(true);
   const [visibleModules, setVisibleModules] = useState<number[]>([]);
 
@@ -38,8 +41,8 @@ const ModulesPage = () => {
     // Находим модуль по ID
     const module = modulesData.find(m => m.id === moduleId);
     
-    if (module && module.isFree) {
-      // Если модуль бесплатный, переходим к урокам модуля
+    if (module && (module.isFree || subscription.isActive)) {
+      // Если модуль бесплатный или есть подписка, переходим к урокам модуля
       navigate(`/lesson/${moduleId}/1`);
     } else {
       // Показываем уведомление о необходимости подписки
@@ -85,6 +88,11 @@ const ModulesPage = () => {
         </Button>
         <h1 className="text-xl font-bold">Модули курса</h1>
         <div className="w-10"></div> {/* Для выравнивания заголовка по центру */}
+      </div>
+      
+      {/* Отображаем статус пользователя */}
+      <div className="mb-6">
+        <UserStatus />
       </div>
       
       {/* Бесплатные модули */}
@@ -147,6 +155,11 @@ const ModulesPage = () => {
         <h2 className="text-lg font-semibold mb-4 flex items-center">
           <span className="bg-accent text-white text-xs py-1 px-2 rounded-full mr-2">Премиум</span>
           Модули по подписке
+          {subscription.isActive && (
+            <span className="ml-2 text-xs bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400 py-1 px-2 rounded-full">
+              Доступно
+            </span>
+          )}
         </h2>
         <div className="space-y-4">
           {premiumModules.map((module, index) => (
@@ -160,8 +173,10 @@ const ModulesPage = () => {
               style={{ transitionDelay: `${(index + freeModules.length) * 100}ms` }}
             >
               <Card 
-                variant="outline"
-                className="hover:shadow-sm relative overflow-hidden"
+                variant={subscription.isActive ? "default" : "outline"}
+                className={`hover:shadow-sm relative overflow-hidden ${
+                  subscription.isActive ? "border-l-4 border-accent" : ""
+                }`}
                 onClick={() => handleModuleClick(module.id)}
               >
                 {/* Премиум оверлей */}
@@ -182,16 +197,23 @@ const ModulesPage = () => {
                     </p>
                     <div className="flex items-center justify-between text-xs text-gray-500 dark:text-gray-400">
                       <span>{module.lessonsCount} уроков</span>
-                      <Button 
-                        variant="outline" 
-                        size="sm"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          navigate('/subscription');
-                        }}
-                      >
-                        Открыть доступ
-                      </Button>
+                      {!subscription.isActive && (
+                        <Button 
+                          variant="outline" 
+                          size="sm"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            navigate('/subscription');
+                          }}
+                        >
+                          Открыть доступ
+                        </Button>
+                      )}
+                      {subscription.isActive && (
+                        <span className="text-green-600 dark:text-green-400 font-medium">
+                          Доступно
+                        </span>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -201,18 +223,20 @@ const ModulesPage = () => {
         </div>
       </div>
       
-      <div className="mt-8 text-center">
-        <Button 
-          variant="accent" 
-          size="lg"
-          onClick={() => navigate('/subscription')}
-        >
-          Открыть все модули
-        </Button>
-        <p className="text-sm text-gray-500 dark:text-gray-400 mt-2">
-          Подписка дает доступ ко всем 8 модулям курса и дополнительным материалам
-        </p>
-      </div>
+      {!subscription.isActive && (
+        <div className="mt-8 text-center">
+          <Button 
+            variant="accent" 
+            size="lg"
+            onClick={() => navigate('/subscription')}
+          >
+            Открыть все модули
+          </Button>
+          <p className="text-sm text-gray-500 dark:text-gray-400 mt-2">
+            Подписка дает доступ ко всем 8 модулям курса и дополнительным материалам
+          </p>
+        </div>
+      )}
     </div>
   );
 };
