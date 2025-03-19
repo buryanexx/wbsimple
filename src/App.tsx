@@ -22,6 +22,11 @@ import MasterClassPage from './pages/MasterClassPage';
 declare global {
   interface Window {
     tgInitComplete?: boolean;
+    reactAppMounted?: boolean;
+    pendingNavigationPath?: string;
+    safeTelegramNavigation?: (path: string) => void;
+    tgWebAppLogs?: any[];
+    tgWebAppErrors?: any[];
   }
   
   // Определяем интерфейс для CustomEvent с detail
@@ -47,31 +52,59 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   return isAuthenticated ? <>{children}</> : <Navigate to="/" replace />;
 };
 
-// Компонент для обработки внешних событий навигации
-const TelegramRouteHandler = () => {
+// Компонент для обработки инициализации приложения
+const AppInitializer = () => {
   const navigate = useNavigate();
   const location = useLocation();
   
-  // Слушаем событие изменения хеша от Telegram
+  // Выполняется только один раз при монтировании компонента
   useEffect(() => {
-    const handleTelegramHashChange = (event: TelegramHashChangeEvent) => {
-      const hash = event.detail.hash.replace('#', '');
-      if (hash && hash !== location.pathname) {
+    // Маркируем, что React приложение смонтировано
+    window.reactAppMounted = true;
+    
+    console.log('React приложение инициализировано, текущий путь:', location.pathname);
+    
+    // Проверяем, есть ли отложенная навигация
+    if (window.pendingNavigationPath) {
+      const path = window.pendingNavigationPath;
+      window.pendingNavigationPath = undefined; // Очищаем
+      
+      console.log('Обрабатываем отложенную навигацию:', path);
+      
+      // Используем setTimeout, чтобы дать время на инициализацию роутера
+      setTimeout(() => {
+        navigate(path, { replace: true });
+      }, 100);
+    }
+    
+    // Синхронизируем текущий путь с хешем в URL
+    const currentHashPath = window.location.hash.replace('#', '') || '/';
+    if (currentHashPath !== location.pathname && currentHashPath !== '/') {
+      console.log('Синхронизируем путь с хешем:', currentHashPath);
+      navigate(currentHashPath, { replace: true });
+    }
+    
+    // Слушаем изменения хеша для внешних источников
+    const handleHashChange = () => {
+      const hash = window.location.hash.replace('#', '') || '/';
+      
+      console.log('Обработчик hashchange:', hash, 'текущий путь:', location.pathname);
+      
+      if (hash !== location.pathname) {
+        console.log('Обновляем путь из-за изменения хеша');
         navigate(hash, { replace: true });
       }
     };
     
-    window.addEventListener('telegram-hash-change', 
-      handleTelegramHashChange as EventListener);
+    window.addEventListener('hashchange', handleHashChange);
     
     return () => {
-      window.removeEventListener('telegram-hash-change', 
-        handleTelegramHashChange as EventListener);
+      window.removeEventListener('hashchange', handleHashChange);
+      window.reactAppMounted = false;
     };
   }, [navigate, location.pathname]);
   
-  // Просто прокидываем null, компонент только для эффектов
-  return null;
+  return null; // Компонент не рендерит ничего
 };
 
 function AppContent() {
@@ -101,17 +134,17 @@ function AppContent() {
   // Показываем загрузку, пока не инициализирован Telegram WebApp
   if (!appReady) {
     return (
-      <div className="flex items-center justify-center h-screen">
+      <div className="flex flex-col items-center justify-center h-screen">
         <div className="w-16 h-16 border-4 border-[#6A45E8] border-t-transparent rounded-full animate-spin"></div>
-        <p className="ml-4 text-gray-600">Загрузка...</p>
+        <p className="mt-4 text-gray-600">Загрузка приложения...</p>
       </div>
     );
   }
 
   return (
     <div className="app min-h-screen bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white telegram-page-transition">
-      {/* Обработчик маршрутов Telegram */}
-      <TelegramRouteHandler />
+      {/* Инициализатор приложения */}
+      <AppInitializer />
       
       <Routes>
         {/* Публичные маршруты */}

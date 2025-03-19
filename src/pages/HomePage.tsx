@@ -1,18 +1,49 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
+import { useWebApp } from '@vkruglikov/react-telegram-web-app';
 import Card from '../components/Card';
 import Button from '../components/Button';
 import Icon from '../components/Icon';
-import useTelegramNavigation from '../hooks/useTelegramNavigation';
 
 const HomePage = () => {
-  const { navigateTo, webApp } = useTelegramNavigation();
+  const navigate = useNavigate();
+  const location = useLocation();
+  const webApp = useWebApp();
   const [isLoading, setIsLoading] = useState(true);
+
+  // Функция безопасной навигации
+  const handleNavigation = useCallback((path: string) => {
+    if (location.pathname === path) return;
+    
+    try {
+      // Отправляем тактильный отклик
+      if (webApp?.HapticFeedback) {
+        webApp.HapticFeedback.impactOccurred('light');
+      }
+      
+      // Используем глобальную функцию безопасной навигации
+      if (window.safeTelegramNavigation) {
+        window.safeTelegramNavigation(path);
+      } else {
+        // Запасной вариант
+        navigate(path, { replace: true });
+      }
+    } catch (error) {
+      console.error('Ошибка навигации в HomePage:', error);
+      // Если все методы выше не сработали, используем хеш-навигацию
+      try {
+        window.location.hash = path;
+      } catch (hashError) {
+        console.error('Критическая ошибка навигации:', hashError);
+      }
+    }
+  }, [navigate, location.pathname, webApp]);
 
   useEffect(() => {
     // Имитация загрузки данных
     const timer = setTimeout(() => {
       setIsLoading(false);
-    }, 1000);
+    }, 500); // Уменьшаем время ожидания для более быстрой загрузки
 
     // Проверяем, первый ли это визит пользователя
     const isFirstVisit = localStorage.getItem('wb_simple_first_visit') !== 'false';
@@ -20,7 +51,7 @@ const HomePage = () => {
     if (isFirstVisit) {
       // Если первый визит, перенаправляем на онбординг
       localStorage.setItem('wb_simple_first_visit', 'false');
-      navigateTo('/onboarding');
+      handleNavigation('/onboarding');
     }
     
     // Настраиваем кнопку Telegram
@@ -28,7 +59,7 @@ const HomePage = () => {
       webApp.MainButton.setText('Начать обучение');
       webApp.MainButton.show();
       webApp.MainButton.onClick(() => {
-        navigateTo('/modules');
+        handleNavigation('/modules');
       });
     }
     
@@ -37,12 +68,12 @@ const HomePage = () => {
       webApp?.MainButton?.hide();
       clearTimeout(timer);
     };
-  }, [navigateTo, webApp]);
+  }, [handleNavigation, webApp]);
 
   if (isLoading) {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen p-4">
-        <div className="w-16 h-16 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
+        <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
         <p className="mt-4 text-gray-600 dark:text-gray-400">Загрузка...</p>
       </div>
     );
@@ -74,8 +105,7 @@ const HomePage = () => {
             variant="white" 
             className="mt-2 bg-white text-[#6A45E8] hover:bg-gray-100"
             size="sm"
-            data-path="/modules"
-            onClick={() => navigateTo('/modules')}
+            onClick={() => handleNavigation('/modules')}
           >
             Начать обучение
           </Button>
@@ -99,8 +129,7 @@ const HomePage = () => {
             variant="primary" 
             fullWidth
             leftIcon={<Icon name="modules" size={18} />}
-            data-path="/modules"
-            onClick={() => navigateTo('/modules')}
+            onClick={() => handleNavigation('/modules')}
             className="bg-gradient-to-r from-[#6A45E8] to-[#8A65FF] border-none"
           >
             Модули курса
@@ -110,8 +139,7 @@ const HomePage = () => {
             variant="accent" 
             fullWidth
             leftIcon={<Icon name="templates" size={18} />}
-            data-path="/templates"
-            onClick={() => navigateTo('/templates')}
+            onClick={() => handleNavigation('/templates')}
             className="bg-gradient-to-r from-[#F97316] to-[#FB923C] border-none"
           >
             Шаблоны
@@ -123,8 +151,7 @@ const HomePage = () => {
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 mb-6">
           <div 
             className="bg-white dark:bg-gray-800 rounded-lg p-4 shadow-sm border border-gray-200 dark:border-gray-700 hover:shadow-md transition-shadow cursor-pointer relative overflow-hidden"
-            data-path="/calculator"
-            onClick={() => navigateTo('/calculator')}
+            onClick={() => handleNavigation('/calculator')}
           >
             {/* Метка "Бесплатно" */}
             <div className="absolute -right-12 top-6 w-36 bg-green-500 text-white text-xs text-center font-medium py-1 transform rotate-45">
@@ -145,8 +172,7 @@ const HomePage = () => {
           
           <div 
             className="bg-white dark:bg-gray-800 rounded-lg p-4 shadow-sm border border-gray-200 dark:border-gray-700 hover:shadow-md transition-shadow cursor-pointer relative overflow-hidden"
-            data-path="/wb-calculator"
-            onClick={() => navigateTo('/wb-calculator')}
+            onClick={() => handleNavigation('/wb-calculator')}
           >
             {/* Метка "Бесплатно" */}
             <div className="absolute -right-12 top-6 w-36 bg-green-500 text-white text-xs text-center font-medium py-1 transform rotate-45">
@@ -167,8 +193,7 @@ const HomePage = () => {
           
           <div 
             className="bg-white dark:bg-gray-800 rounded-lg p-4 shadow-sm border border-gray-200 dark:border-gray-700 hover:shadow-md transition-shadow cursor-pointer"
-            data-path="/timeline"
-            onClick={() => navigateTo('/timeline')}
+            onClick={() => handleNavigation('/timeline')}
           >
             <div className="flex items-center mb-2">
               <div className="w-10 h-10 rounded-full bg-[#F97316] flex items-center justify-center text-white mr-3">
@@ -188,9 +213,8 @@ const HomePage = () => {
           variant="accent" 
           size="lg"
           fullWidth
-          data-path="/subscription"
           className="mb-10 bg-gradient-to-r from-[#F97316] to-[#FB923C] border-none"
-          onClick={() => navigateTo('/subscription')}
+          onClick={() => handleNavigation('/subscription')}
         >
           Оформить подписку за 1899₽
         </Button>
