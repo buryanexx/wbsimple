@@ -86,11 +86,10 @@ const BottomNavigation = () => {
   const handleNavigation = (e: React.MouseEvent<HTMLAnchorElement>, path: string) => {
     e.preventDefault();
     
-    if (window.tgWebAppLogs) {
-      window.tgWebAppLogs.push({
-        time: new Date().toISOString(),
-        message: `Навигация к: ${path}`
-      });
+    // Если мы уже на этом пути, ничего не делаем
+    if (location.pathname === path) {
+      console.log('Уже находимся на странице:', path);
+      return;
     }
     
     console.log('Переход на путь:', path);
@@ -100,28 +99,23 @@ const BottomNavigation = () => {
       webApp.MainButton.showProgress();
       setTimeout(() => {
         webApp.MainButton.hideProgress();
-      }, 500);
+      }, 300);
     }
     
-    try {
-      // Сначала пробуем react-router-dom для навигации
-      navigate(path);
-      
-      // Затем дублируем навигацию через хеш для надежности
-      setTimeout(() => {
-        if (window.location.hash !== `#${path}`) {
-          console.log('Корректировка хеша:', path);
-          window.location.hash = path;
-        }
-      }, 50);
-    } catch (error) {
-      console.error('Ошибка навигации:', error);
-      // Запасной вариант - прямая установка хеша
-      window.location.hash = path;
-    }
+    // ВАЖНО: используем только один механизм навигации!
+    // Для HashRouter подходит и то, и другое. Выбираем navigate().
+    navigate(path);
     
     // Сбрасываем скролл наверх
     window.scrollTo(0, 0);
+    
+    // Логируем для отладки
+    if (window.tgWebAppLogs) {
+      window.tgWebAppLogs.push({
+        time: new Date().toISOString(),
+        message: `Выполнена навигация к: ${path}`
+      });
+    }
   };
 
   return (

@@ -29,6 +29,7 @@ declare global {
     safeTelegramNavigation?: (path: string) => boolean;
     tgWebAppLogs?: any[];
     tgWebAppErrors?: any[];
+    locationChecked?: boolean;
   }
 }
 
@@ -65,13 +66,17 @@ function AppContent() {
       if (window.tgInitComplete) {
         setAppReady(true);
         
-        // Разовая проверка при загрузке страницы
-        // Если хеш пустой или только '/', обеспечим загрузку главной
-        const hash = window.location.hash;
-        if (!hash || hash === '#' || hash === '#/') {
-          console.log('Пустой хеш при инициализации, перенаправляем на главную');
-          // Направляем на корень через React Router
-          navigate('/');
+        // Проверка пути выполняется только один раз при инициализации
+        if (!window.locationChecked) {
+          window.locationChecked = true;
+          
+          // Если мы не на главной странице, просто инициализируем
+          // React Router обработает текущий путь автоматически
+          if (location.pathname !== '/') {
+            console.log('Инициализация на странице:', location.pathname);
+          } else {
+            console.log('Инициализация на главной странице');
+          }
         }
       } else {
         setTimeout(checkTelegramReady, 50);
@@ -92,8 +97,9 @@ function AppContent() {
         
         // Обработчик кнопки "Назад"
         webApp.BackButton.onClick(() => {
+          // Используем чистую навигацию
           navigate('/');
-          return true; // Чтобы соответствовать типу (path: string) => boolean
+          return true;
         });
       } else {
         webApp.BackButton.hide();
@@ -103,7 +109,7 @@ function AppContent() {
     return () => {
       document.documentElement.classList.remove('telegram-theme');
     };
-  }, [location.pathname, webApp, navigate, location]);
+  }, [location.pathname, webApp, navigate]);
 
   // Показываем загрузку, пока не инициализирован Telegram WebApp
   if (!appReady) {
