@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { HashRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { useAuth, AuthProvider } from './hooks/useAuth.tsx';
 import BottomNavigation from './components/BottomNavigation';
+import { config } from './config.ts';
 
 // Страницы
 import HomePage from './pages/HomePage';
@@ -132,7 +133,7 @@ function AppContent() {
 }
 
 function App() {
-  // Запускаем в HashRouter, который лучше всего работает в Telegram WebApp
+  // Используем HashRouter для максимальной совместимости с Telegram WebApp
   return (
     <Router>
       <AuthProvider>
