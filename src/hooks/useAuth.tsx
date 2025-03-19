@@ -276,4 +276,9 @@ export const useAuth = () => {
   }
   
   return context;
+};
+
+// Экспортируем функцию для проверки, запущено ли приложение в Telegram
+export const isRunningInTelegram = () => {
+  return !!window.Telegram && !!window.Telegram.WebApp;
 }; 

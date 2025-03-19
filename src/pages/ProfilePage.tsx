@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../hooks/useAuth';
+import { useSubscription } from '../hooks/useSubscription';
 import { useWebApp } from '@vkruglikov/react-telegram-web-app';
-import Card from '../components/Card';
+import { useNavigate } from 'react-router-dom';
 import Button from '../components/Button';
+import Card from '../components/Card';
 
 // Типы для данных профиля
 interface UserProfile {
@@ -27,92 +29,62 @@ interface UserProfile {
 
 const ProfilePage = () => {
   const { user, logout } = useAuth();
+  const isAuthenticated = !!user;
+  const { subscription, getFormattedEndDate, getDaysRemaining, features } = useSubscription();
   const webApp = useWebApp();
-  const [profile, setProfile] = useState<UserProfile | null>(null);
+  const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<'progress' | 'achievements'>('progress');
-  const [showLogs, setShowLogs] = useState(false);
-  const [logsContent, setLogsContent] = useState<any[]>([]);
+  const [activeTab, setActiveTab] = useState<'info' | 'progress' | 'debug'>('info');
 
   useEffect(() => {
     // Имитация загрузки данных
     const timer = setTimeout(() => {
-      // В реальном приложении здесь будет запрос к API
-      // Для демонстрации используем моковые данные
-      const mockProfile: UserProfile = {
-        name: webApp?.initDataUnsafe?.user?.first_name || 'Пользователь',
-        photo: webApp?.initDataUnsafe?.user?.photo_url,
-        subscriptionStatus: 'inactive',
-        progress: {
-          completedLessons: 5,
-          totalLessons: 42,
-          completedModules: 1,
-          totalModules: 8
-        },
-        achievements: [
-          {
-            id: 1,
-            title: 'Первые шаги',
-            description: 'Завершите первый урок',
-            icon: '🏆',
-            unlocked: true
-          },
-          {
-            id: 2,
-            title: 'Исследователь',
-            description: 'Изучите все материалы первого модуля',
-            icon: '🔍',
-            unlocked: true
-          },
-          {
-            id: 3,
-            title: 'Знаток Wildberries',
-            description: 'Пройдите все тесты с первой попытки',
-            icon: '🧠',
-            unlocked: false
-          },
-          {
-            id: 4,
-            title: 'Мастер продаж',
-            description: 'Достигните 100 000 рублей продаж',
-            icon: '💰',
-            unlocked: false
-          },
-          {
-            id: 5,
-            title: 'Эксперт Wildberries',
-            description: 'Завершите все модули курса',
-            icon: '🎓',
-            unlocked: false
-          }
-        ]
-      };
-      
-      setProfile(mockProfile);
       setIsLoading(false);
-    }, 800);
+    }, 600);
     
-    return () => clearTimeout(timer);
-  }, [webApp]);
+    // Настраиваем кнопку назад
+    if (webApp?.BackButton) {
+      webApp.BackButton.show();
+      webApp.BackButton.onClick(() => {
+        navigate('/');
+        return true;
+      });
+    }
 
-  const handleSubscribe = () => {
-    navigate('/subscription');
-  };
+    // Автоматическая авторизация, если находимся в Telegram
+    if (webApp && !isAuthenticated) {
+      tryTelegramAuth();
+    }
+    
+    return () => {
+      clearTimeout(timer);
+      if (webApp?.BackButton) {
+        webApp.BackButton.hide();
+      }
+    };
+  }, [webApp, navigate, isAuthenticated]);
 
-  // Обработчик для отображения логов
-  const handleShowLogs = () => {
-    setShowLogs(true);
-    const logs = window.tgWebAppLogs || [];
-    const errors = window.tgWebAppErrors || [];
-    setLogsContent([...logs, ...errors]);
-  };
+  // Функция для автоматической авторизации через Telegram
+  const tryTelegramAuth = async () => {
+    if (!webApp?.initDataUnsafe?.user) {
+      console.log('Нет данных пользователя в Telegram WebApp');
+      return;
+    }
 
-  // Функция для копирования логов
-  const copyLogs = () => {
-    const logText = JSON.stringify(logsContent, null, 2);
-    navigator.clipboard.writeText(logText)
-      .then(() => alert('Логи скопированы в буфер обмена'))
-      .catch(err => alert('Ошибка копирования: ' + err));
+    try {
+      // Здесь был бы запрос к API для авторизации через Telegram
+      // В демо-режиме просто отображаем сообщение
+      webApp.showPopup({
+        title: 'Авторизация через Telegram',
+        message: 'В реальном приложении здесь будет полноценная авторизация пользователя через данные Telegram WebApp.',
+        buttons: [{ id: 'ok', type: 'ok', text: 'Понятно' }]
+      });
+    } catch (error) {
+      console.error('Ошибка при авторизации через Telegram:', error);
+      if (webApp) {
+        webApp.showAlert('Ошибка авторизации через Telegram. Попробуйте позже.');
+      }
+    }
   };
 
   // Функция для очистки хранилища
@@ -120,7 +92,18 @@ const ProfilePage = () => {
     try {
       localStorage.clear();
       sessionStorage.clear();
-      alert('Хранилище очищено. Перезагрузите страницу.');
+      if (webApp) {
+        webApp.showPopup({
+          title: 'Хранилище очищено',
+          message: 'Локальное хранилище очищено. Страница будет перезагружена.',
+          buttons: [{ id: 'ok', type: 'ok', text: 'OK' }]
+        }, () => {
+          window.location.reload();
+        });
+      } else {
+        alert('Хранилище очищено. Перезагрузите страницу.');
+        window.location.reload();
+      }
     } catch (error) {
       alert('Ошибка очистки: ' + error);
     }
@@ -148,161 +131,319 @@ const ProfilePage = () => {
     );
   }
 
-  if (!profile) {
-    return (
-      <div className="p-4 text-center">
-        <p className="text-lg mb-4">Не удалось загрузить профиль</p>
-        <Button 
-          variant="primary"
-          onClick={() => navigate('/')}
-        >
-          Вернуться на главную
-        </Button>
-      </div>
-    );
-  }
-
-  const progressPercentage = Math.round(
-    (profile.progress.completedLessons / profile.progress.totalLessons) * 100
-  );
-
-  const moduleProgressPercentage = Math.round(
-    (profile.progress.completedModules / profile.progress.totalModules) * 100
-  );
-
   return (
-    <div className="container max-w-lg mx-auto p-4 pb-24">
-      <h1 className="text-2xl font-bold text-center mb-6">Профиль</h1>
+    <div className="p-4 pb-44">
+      <div className="flex items-center justify-between mb-6">
+        <Button 
+          variant="ghost" 
+          onClick={() => navigate('/')}
+          leftIcon={<span className="text-lg">←</span>}
+        >
+          Назад
+        </Button>
+        <h1 className="text-xl font-bold">Профиль</h1>
+        <div className="w-10"></div> {/* Для выравнивания заголовка по центру */}
+      </div>
       
-      {user ? (
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-4 mb-6">
-          <div className="flex items-center mb-4">
-            {user.photoUrl ? (
-              <img src={user.photoUrl} alt={user.firstName} className="w-16 h-16 rounded-full mr-4" />
-            ) : (
-              <div className="w-16 h-16 rounded-full bg-primary text-white flex items-center justify-center mr-4 text-xl font-bold">
-                {user.firstName.charAt(0)}
-              </div>
-            )}
-            <div>
-              <h2 className="text-xl font-bold">{user.firstName} {user.lastName}</h2>
-              {user.username && <p className="text-gray-600 dark:text-gray-400">@{user.username}</p>}
-            </div>
+      {/* Профиль пользователя */}
+      {!isAuthenticated || !user ? (
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 text-center mb-6">
+          <div className="w-20 h-20 bg-gray-200 dark:bg-gray-700 rounded-full flex items-center justify-center mx-auto mb-4">
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-10 w-10 text-gray-400 dark:text-gray-500" viewBox="0 0 20 20" fill="currentColor">
+              <path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd" />
+            </svg>
           </div>
-          
-          {user.hasActiveSubscription ? (
-            <div className="bg-green-100 dark:bg-green-900 p-3 rounded-lg mb-4">
-              <p className="font-medium text-green-800 dark:text-green-200">
-                Активная подписка до: {user.subscriptionEndDate ? new Date(user.subscriptionEndDate).toLocaleDateString() : 'Бессрочно'}
-              </p>
-            </div>
-          ) : (
-            <div className="bg-yellow-100 dark:bg-yellow-900 p-3 rounded-lg mb-4">
-              <p className="font-medium text-yellow-800 dark:text-yellow-200">
-                У вас нет активной подписки
-              </p>
-              <a 
-                href="#/subscription" 
-                className="inline-block mt-2 text-sm font-medium text-primary dark:text-primary-light"
-              >
-                Оформить подписку
-              </a>
-            </div>
-          )}
-          
-          <button 
-            onClick={() => logout()} 
-            className="w-full py-2 px-4 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
+          <h2 className="text-xl font-bold mb-4">Вы не авторизованы</h2>
+          <p className="text-gray-600 dark:text-gray-400 mb-6">
+            Для доступа к полному функционалу приложения необходимо авторизоваться через Telegram.
+          </p>
+          <Button 
+            variant="primary"
+            onClick={() => {
+              if (webApp) {
+                webApp.showAlert('Это приложение работает только в Telegram. Авторизуйтесь, запустив через Telegram.');
+              } else {
+                alert('Запустите приложение через Telegram для автоматической авторизации.');
+              }
+            }}
           >
-            Выйти
-          </button>
+            Авторизоваться
+          </Button>
         </div>
       ) : (
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-4 mb-6">
-          <p className="text-gray-600 dark:text-gray-400 text-center">
-            Вы не авторизованы
-          </p>
-        </div>
-      )}
-      
-      {/* Блок для отладки */}
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-4 mb-6">
-        <h2 className="text-lg font-bold mb-3">Инструменты отладки</h2>
-        
-        <div className="space-y-3">
-          <button 
-            onClick={handleShowLogs} 
-            className="w-full py-2 px-4 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
-          >
-            Показать логи
-          </button>
-          
-          <button 
-            onClick={clearStorage} 
-            className="w-full py-2 px-4 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors"
-          >
-            Очистить хранилище
-          </button>
-          
-          <div className="grid grid-cols-2 gap-2">
-            <button 
-              onClick={() => testNavigation('/')} 
-              className="py-2 px-3 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 rounded-lg"
-            >
-              Тест: Главная
-            </button>
-            <button 
-              onClick={() => testNavigation('/modules')} 
-              className="py-2 px-3 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 rounded-lg"
-            >
-              Тест: Модули
-            </button>
-          </div>
-          
-          <div className="text-xs text-gray-500">
-            <p>Hash: {window.location.hash}</p>
-            <p>PathName: {window.location.pathname}</p>
-            <p>WebApp: {webApp ? 'Доступен' : 'Недоступен'}</p>
-          </div>
-        </div>
-      </div>
-      
-      {/* Модальное окно с логами */}
-      {showLogs && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white dark:bg-gray-800 rounded-lg max-w-lg w-full max-h-[80vh] overflow-auto p-4">
-            <div className="flex justify-between items-center mb-4">
-              <h3 className="text-lg font-bold">Логи</h3>
-              <div className="space-x-2">
-                <button 
-                  onClick={copyLogs}
-                  className="px-3 py-1 bg-blue-500 text-white text-sm rounded-md"
-                >
-                  Копировать
-                </button>
-                <button 
-                  onClick={() => setShowLogs(false)}
-                  className="px-3 py-1 bg-gray-500 text-white text-sm rounded-md"
-                >
-                  Закрыть
-                </button>
+        <>
+          {/* Шапка профиля */}
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 mb-6">
+            <div className="flex items-start">
+              {user.photoUrl ? (
+                <img src={user.photoUrl} alt={user.firstName} className="w-20 h-20 rounded-full mr-4" />
+              ) : (
+                <div className="w-20 h-20 rounded-full bg-primary text-white flex items-center justify-center mr-4 text-2xl font-bold">
+                  {user.firstName.charAt(0)}
+                </div>
+              )}
+              <div className="flex-1">
+                <h2 className="text-xl font-bold">{user.firstName} {user.lastName}</h2>
+                {user.username && <p className="text-gray-600 dark:text-gray-400 mb-2">@{user.username}</p>}
+                
+                <div className="mt-2">
+                  <div className={`inline-flex items-center px-3 py-1 rounded-full text-sm ${
+                    subscription.isActive 
+                      ? 'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400' 
+                      : 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300'
+                  }`}>
+                    <span className={`w-2 h-2 rounded-full mr-2 ${
+                      subscription.isActive ? 'bg-green-500' : 'bg-gray-400'
+                    }`}></span>
+                    {subscription.isActive ? 'Подписка активна' : 'Нет подписки'}
+                  </div>
+                </div>
               </div>
             </div>
+          </div>
+          
+          {/* Табы */}
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md overflow-hidden mb-6">
+            <div className="flex border-b border-gray-200 dark:border-gray-700">
+              <button
+                className={`flex-1 py-3 px-4 text-center font-medium transition-colors ${
+                  activeTab === 'info'
+                    ? 'text-primary border-b-2 border-primary'
+                    : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
+                }`}
+                onClick={() => setActiveTab('info')}
+              >
+                Информация
+              </button>
+              <button
+                className={`flex-1 py-3 px-4 text-center font-medium transition-colors ${
+                  activeTab === 'progress'
+                    ? 'text-primary border-b-2 border-primary'
+                    : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
+                }`}
+                onClick={() => setActiveTab('progress')}
+              >
+                Прогресс
+              </button>
+              <button
+                className={`flex-1 py-3 px-4 text-center font-medium transition-colors ${
+                  activeTab === 'debug'
+                    ? 'text-primary border-b-2 border-primary'
+                    : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
+                }`}
+                onClick={() => setActiveTab('debug')}
+              >
+                Отладка
+              </button>
+            </div>
             
-            <div className="bg-gray-100 dark:bg-gray-900 p-2 rounded-md text-xs font-mono h-[300px] overflow-auto">
-              {logsContent.length > 0 ? (
-                logsContent.map((log, index) => (
-                  <div key={index} className={`mb-1 p-1 ${log.error ? 'text-red-500' : ''}`}>
-                    <span className="opacity-50">[{log.time}]</span>{' '}
-                    {log.message || log.error}
+            <div className="p-4">
+              {activeTab === 'info' && (
+                <>
+                  {/* Информация о подписке */}
+                  <div className="mb-6">
+                    <h3 className="text-lg font-bold mb-3">Подписка</h3>
+                    {subscription.isActive ? (
+                      <div className="bg-green-50 dark:bg-green-900/10 p-4 rounded-lg">
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="font-medium">Статус:</span>
+                          <span className="text-green-600 dark:text-green-400 font-medium">Активна</span>
+                        </div>
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="font-medium">План:</span>
+                          <span className="capitalize">{subscription.plan}</span>
+                        </div>
+                        {subscription.endDate && (
+                          <>
+                            <div className="flex items-center justify-between mb-2">
+                              <span className="font-medium">Дата окончания:</span>
+                              <span>{getFormattedEndDate()}</span>
+                            </div>
+                            <div className="flex items-center justify-between">
+                              <span className="font-medium">Осталось дней:</span>
+                              <span>{getDaysRemaining()}</span>
+                            </div>
+                          </>
+                        )}
+                        <Button
+                          variant="outline"
+                          className="w-full mt-4"
+                          onClick={() => navigate('/subscription')}
+                        >
+                          Продлить
+                        </Button>
+                      </div>
+                    ) : (
+                      <div className="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg">
+                        <p className="text-center mb-4">
+                          У вас нет активной подписки. Оформите подписку, чтобы получить доступ
+                          ко всем материалам курса.
+                        </p>
+                        <Button
+                          variant="primary"
+                          className="w-full"
+                          onClick={() => navigate('/subscription')}
+                        >
+                          Оформить подписку
+                        </Button>
+                      </div>
+                    )}
                   </div>
-                ))
-              ) : (
-                <p>Нет логов</p>
+                  
+                  {/* Доступные возможности */}
+                  <div>
+                    <h3 className="text-lg font-bold mb-3">Доступные возможности</h3>
+                    <ul className="space-y-2">
+                      {subscription.features.map((feature, index) => (
+                        <li 
+                          key={index}
+                          className="flex items-center p-3 bg-gray-50 dark:bg-gray-800 rounded-lg"
+                        >
+                          <span className="text-green-500 mr-3">✓</span>
+                          <span>{feature}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                </>
+              )}
+              
+              {activeTab === 'progress' && (
+                <>
+                  <h3 className="text-lg font-bold mb-3">Ваш прогресс</h3>
+                  
+                  {/* Прогресс по урокам */}
+                  <div className="mb-4">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="font-medium">Завершено уроков:</span>
+                      <span>{user.progress?.completedLessons.length || 0}</span>
+                    </div>
+                    <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2.5 mb-4">
+                      <div 
+                        className="h-2.5 bg-primary rounded-full"
+                        style={{ width: `${(user.progress?.completedLessons.length || 0) / 30 * 100}%` }}
+                      ></div>
+                    </div>
+                  </div>
+                  
+                  {/* Прогресс по модулям */}
+                  <div className="mb-4">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="font-medium">Завершено модулей:</span>
+                      <span>{user.progress?.completedModules.length || 0}</span>
+                    </div>
+                    <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2.5 mb-4">
+                      <div 
+                        className="h-2.5 bg-primary rounded-full"
+                        style={{ width: `${(user.progress?.completedModules.length || 0) / 8 * 100}%` }}
+                      ></div>
+                    </div>
+                  </div>
+                  
+                  {/* Ближайшие достижения */}
+                  <div>
+                    <h3 className="text-lg font-bold mb-3">Ближайшие достижения</h3>
+                    <Card variant="outline" className="mb-3">
+                      <div className="flex items-center">
+                        <div className="w-10 h-10 rounded-full bg-accent/10 text-accent flex items-center justify-center mr-3">
+                          🏆
+                        </div>
+                        <div>
+                          <h4 className="font-medium">Прохождение первого модуля</h4>
+                          <p className="text-sm text-gray-500 dark:text-gray-400">
+                            Завершите все уроки первого модуля
+                          </p>
+                        </div>
+                      </div>
+                    </Card>
+                    <Card variant="outline">
+                      <div className="flex items-center">
+                        <div className="w-10 h-10 rounded-full bg-accent/10 text-accent flex items-center justify-center mr-3">
+                          🚀
+                        </div>
+                        <div>
+                          <h4 className="font-medium">Первый товар</h4>
+                          <p className="text-sm text-gray-500 dark:text-gray-400">
+                            Разместите свой первый товар на маркетплейсе
+                          </p>
+                        </div>
+                      </div>
+                    </Card>
+                  </div>
+                </>
+              )}
+              
+              {activeTab === 'debug' && (
+                <>
+                  <h3 className="text-lg font-bold mb-3">Инструменты отладки</h3>
+                  
+                  <div className="space-y-3 mb-4">
+                    <Button 
+                      variant="outline"
+                      className="w-full"
+                      onClick={clearStorage}
+                    >
+                      Очистить хранилище
+                    </Button>
+                    
+                    <Button 
+                      variant="outline"
+                      className="w-full"
+                      onClick={() => {
+                        logout();
+                        if (webApp) {
+                          webApp.showAlert('Вы вышли из аккаунта');
+                        }
+                      }}
+                    >
+                      Выйти из аккаунта
+                    </Button>
+                  </div>
+                  
+                  <h4 className="font-medium mb-2">Тестовая навигация:</h4>
+                  <div className="grid grid-cols-2 gap-2 mb-4">
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      onClick={() => testNavigation('/')}
+                    >
+                      Главная
+                    </Button>
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      onClick={() => testNavigation('/modules')}
+                    >
+                      Модули
+                    </Button>
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      onClick={() => testNavigation('/templates')}
+                    >
+                      Шаблоны
+                    </Button>
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      onClick={() => testNavigation('/subscription')}
+                    >
+                      Подписка
+                    </Button>
+                  </div>
+                  
+                  <h4 className="font-medium mb-2">Информация:</h4>
+                  <div className="bg-gray-100 dark:bg-gray-800 p-3 rounded-lg text-xs font-mono overflow-x-auto">
+                    <p className="mb-1">Hash: {window.location.hash}</p>
+                    <p className="mb-1">PathName: {window.location.pathname}</p>
+                    <p className="mb-1">WebApp: {webApp ? 'Доступен' : 'Недоступен'}</p>
+                    <p>Версия: 1.0.0</p>
+                  </div>
+                </>
               )}
             </div>
           </div>
-        </div>
+        </>
       )}
     </div>
   );
