@@ -1,8 +1,10 @@
 import { useLocation } from 'react-router-dom';
 import Icon from './Icon';
+import { useWebApp } from '@vkruglikov/react-telegram-web-app';
 
 const BottomNavigation = () => {
   const location = useLocation();
+  const webApp = useWebApp();
   const currentPath = location.pathname;
   
   // Проверяем, находимся ли мы на странице урока
@@ -37,15 +39,40 @@ const BottomNavigation = () => {
     }
   ] as const;
 
+  // Обработчик навигации специально для Telegram WebApp
+  const handleNavigation = (e: React.MouseEvent<HTMLAnchorElement>, path: string) => {
+    e.preventDefault();
+    
+    // Добавляем индикатор загрузки
+    if (webApp?.MainButton) {
+      webApp.MainButton.showProgress();
+      setTimeout(() => {
+        webApp.MainButton.hideProgress();
+      }, 500);
+    }
+    
+    // Безопасная навигация через хеш
+    window.location.hash = path;
+    
+    // Если доступна функция безопасной навигации для Telegram
+    if (window.safeTelegramNavigation) {
+      window.safeTelegramNavigation(path);
+    }
+  };
+
   return (
     <div className="fixed bottom-0 left-0 right-0 bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 shadow-lg z-50">
       <div className="flex justify-around">
         {navItems.map((item) => {
-          const isActive = currentPath === item.path;
+          // Проверяем активный пункт по текущему хешу
+          const isActive = currentPath === item.path || 
+                          (currentPath === '' && item.path === '/');
+          
           return (
             <a
               key={item.path}
               href={`#${item.path}`}
+              onClick={(e) => handleNavigation(e, item.path)}
               className={`flex flex-col items-center py-2 px-3 transition-colors duration-200 ${
                 isActive
                   ? 'text-primary'

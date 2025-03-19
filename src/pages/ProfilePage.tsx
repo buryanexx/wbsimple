@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { useAuth } from '../hooks/useAuth';
 import { useWebApp } from '@vkruglikov/react-telegram-web-app';
 import Card from '../components/Card';
 import Button from '../components/Button';
@@ -26,11 +26,13 @@ interface UserProfile {
 }
 
 const ProfilePage = () => {
-  const navigate = useNavigate();
+  const { user, logout } = useAuth();
   const webApp = useWebApp();
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'progress' | 'achievements'>('progress');
+  const [showLogs, setShowLogs] = useState(false);
+  const [logsContent, setLogsContent] = useState<any[]>([]);
 
   useEffect(() => {
     // Имитация загрузки данных
@@ -97,6 +99,46 @@ const ProfilePage = () => {
     navigate('/subscription');
   };
 
+  // Обработчик для отображения логов
+  const handleShowLogs = () => {
+    setShowLogs(true);
+    const logs = window.tgWebAppLogs || [];
+    const errors = window.tgWebAppErrors || [];
+    setLogsContent([...logs, ...errors]);
+  };
+
+  // Функция для копирования логов
+  const copyLogs = () => {
+    const logText = JSON.stringify(logsContent, null, 2);
+    navigator.clipboard.writeText(logText)
+      .then(() => alert('Логи скопированы в буфер обмена'))
+      .catch(err => alert('Ошибка копирования: ' + err));
+  };
+
+  // Функция для очистки хранилища
+  const clearStorage = () => {
+    try {
+      localStorage.clear();
+      sessionStorage.clear();
+      alert('Хранилище очищено. Перезагрузите страницу.');
+    } catch (error) {
+      alert('Ошибка очистки: ' + error);
+    }
+  };
+
+  // Функция для тестовой навигации
+  const testNavigation = (path: string) => {
+    try {
+      if (window.safeTelegramNavigation) {
+        window.safeTelegramNavigation(path);
+      } else {
+        window.location.hash = path;
+      }
+    } catch (error) {
+      alert('Ошибка навигации: ' + error);
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen p-4">
@@ -129,200 +171,137 @@ const ProfilePage = () => {
   );
 
   return (
-    <div className="p-4 pb-44 animate-fade-in">
-      <div className="flex items-center justify-between mb-6">
-        <Button 
-          variant="ghost" 
-          onClick={() => navigate('/')}
-          leftIcon={<span className="text-lg">←</span>}
-        >
-          Назад
-        </Button>
-        <h1 className="text-xl font-bold">Профиль</h1>
-        <div className="w-10"></div> {/* Для выравнивания заголовка по центру */}
-      </div>
+    <div className="container max-w-lg mx-auto p-4 pb-24">
+      <h1 className="text-2xl font-bold text-center mb-6">Профиль</h1>
       
-      {/* Информация о пользователе */}
-      <Card className="mb-6 animate-slide-in-right">
-        <div className="flex items-center">
-          <div className="w-16 h-16 rounded-full bg-gray-200 dark:bg-gray-700 overflow-hidden mr-4 border-2 border-primary">
-            {profile.photo ? (
-              <img 
-                src={profile.photo} 
-                alt={profile.name} 
-                className="w-full h-full object-cover"
-              />
+      {user ? (
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-4 mb-6">
+          <div className="flex items-center mb-4">
+            {user.photoUrl ? (
+              <img src={user.photoUrl} alt={user.firstName} className="w-16 h-16 rounded-full mr-4" />
             ) : (
-              <div className="w-full h-full flex items-center justify-center text-gray-400 text-2xl">
-                👤
+              <div className="w-16 h-16 rounded-full bg-primary text-white flex items-center justify-center mr-4 text-xl font-bold">
+                {user.firstName.charAt(0)}
               </div>
             )}
+            <div>
+              <h2 className="text-xl font-bold">{user.firstName} {user.lastName}</h2>
+              {user.username && <p className="text-gray-600 dark:text-gray-400">@{user.username}</p>}
+            </div>
           </div>
-          <div className="flex-1">
-            <h2 className="text-lg font-semibold">{profile.name}</h2>
-            <div className={`text-sm flex items-center ${
-              profile.subscriptionStatus === 'active' 
-                ? 'text-green-600 dark:text-green-400' 
-                : 'text-gray-500 dark:text-gray-400'
-            }`}>
-              {profile.subscriptionStatus === 'active' ? (
-                <>
-                  <span className="mr-1">✓</span>
-                  <span>Подписка активна до {profile.subscriptionExpiry}</span>
-                </>
+          
+          {user.hasActiveSubscription ? (
+            <div className="bg-green-100 dark:bg-green-900 p-3 rounded-lg mb-4">
+              <p className="font-medium text-green-800 dark:text-green-200">
+                Активная подписка до: {user.subscriptionEndDate ? new Date(user.subscriptionEndDate).toLocaleDateString() : 'Бессрочно'}
+              </p>
+            </div>
+          ) : (
+            <div className="bg-yellow-100 dark:bg-yellow-900 p-3 rounded-lg mb-4">
+              <p className="font-medium text-yellow-800 dark:text-yellow-200">
+                У вас нет активной подписки
+              </p>
+              <a 
+                href="#/subscription" 
+                className="inline-block mt-2 text-sm font-medium text-primary dark:text-primary-light"
+              >
+                Оформить подписку
+              </a>
+            </div>
+          )}
+          
+          <button 
+            onClick={() => logout()} 
+            className="w-full py-2 px-4 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
+          >
+            Выйти
+          </button>
+        </div>
+      ) : (
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-4 mb-6">
+          <p className="text-gray-600 dark:text-gray-400 text-center">
+            Вы не авторизованы
+          </p>
+        </div>
+      )}
+      
+      {/* Блок для отладки */}
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-4 mb-6">
+        <h2 className="text-lg font-bold mb-3">Инструменты отладки</h2>
+        
+        <div className="space-y-3">
+          <button 
+            onClick={handleShowLogs} 
+            className="w-full py-2 px-4 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
+          >
+            Показать логи
+          </button>
+          
+          <button 
+            onClick={clearStorage} 
+            className="w-full py-2 px-4 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors"
+          >
+            Очистить хранилище
+          </button>
+          
+          <div className="grid grid-cols-2 gap-2">
+            <button 
+              onClick={() => testNavigation('/')} 
+              className="py-2 px-3 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 rounded-lg"
+            >
+              Тест: Главная
+            </button>
+            <button 
+              onClick={() => testNavigation('/modules')} 
+              className="py-2 px-3 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 rounded-lg"
+            >
+              Тест: Модули
+            </button>
+          </div>
+          
+          <div className="text-xs text-gray-500">
+            <p>Hash: {window.location.hash}</p>
+            <p>PathName: {window.location.pathname}</p>
+            <p>WebApp: {webApp ? 'Доступен' : 'Недоступен'}</p>
+          </div>
+        </div>
+      </div>
+      
+      {/* Модальное окно с логами */}
+      {showLogs && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white dark:bg-gray-800 rounded-lg max-w-lg w-full max-h-[80vh] overflow-auto p-4">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-lg font-bold">Логи</h3>
+              <div className="space-x-2">
+                <button 
+                  onClick={copyLogs}
+                  className="px-3 py-1 bg-blue-500 text-white text-sm rounded-md"
+                >
+                  Копировать
+                </button>
+                <button 
+                  onClick={() => setShowLogs(false)}
+                  className="px-3 py-1 bg-gray-500 text-white text-sm rounded-md"
+                >
+                  Закрыть
+                </button>
+              </div>
+            </div>
+            
+            <div className="bg-gray-100 dark:bg-gray-900 p-2 rounded-md text-xs font-mono h-[300px] overflow-auto">
+              {logsContent.length > 0 ? (
+                logsContent.map((log, index) => (
+                  <div key={index} className={`mb-1 p-1 ${log.error ? 'text-red-500' : ''}`}>
+                    <span className="opacity-50">[{log.time}]</span>{' '}
+                    {log.message || log.error}
+                  </div>
+                ))
               ) : (
-                <>
-                  <span className="mr-1">○</span>
-                  <span>Подписка не активна</span>
-                </>
+                <p>Нет логов</p>
               )}
             </div>
           </div>
-        </div>
-      </Card>
-      
-      {/* Вкладки */}
-      <div className="flex mb-4">
-        <button
-          className={`flex-1 py-3 px-4 font-medium transition-colors duration-200 border-b-2 ${
-            activeTab === 'progress' 
-              ? 'text-primary border-primary' 
-              : 'text-gray-500 dark:text-gray-400 border-transparent hover:text-gray-700 dark:hover:text-gray-300'
-          }`}
-          onClick={() => setActiveTab('progress')}
-        >
-          Прогресс
-        </button>
-        <button
-          className={`flex-1 py-3 px-4 font-medium transition-colors duration-200 border-b-2 ${
-            activeTab === 'achievements' 
-              ? 'text-primary border-primary' 
-              : 'text-gray-500 dark:text-gray-400 border-transparent hover:text-gray-700 dark:hover:text-gray-300'
-          }`}
-          onClick={() => setActiveTab('achievements')}
-        >
-          Достижения
-        </button>
-      </div>
-      
-      {activeTab === 'progress' && (
-        <div className="animate-fade-in">
-          {/* Прогресс обучения */}
-          <Card className="mb-6">
-            <h3 className="text-xl font-bold mb-4">Прогресс обучения</h3>
-            <div className="mb-6">
-              <div className="flex justify-between text-sm mb-2">
-                <span>Общий прогресс</span>
-                <span className="font-semibold">{progressPercentage}%</span>
-              </div>
-              <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-3 overflow-hidden">
-                <div 
-                  className="bg-primary h-3 rounded-full transition-all duration-1000" 
-                  style={{ width: `${progressPercentage}%` }}
-                ></div>
-              </div>
-            </div>
-            <div className="mb-6">
-              <div className="flex justify-between text-sm mb-2">
-                <span>Прогресс по модулям</span>
-                <span className="font-semibold">{moduleProgressPercentage}%</span>
-              </div>
-              <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-3 overflow-hidden">
-                <div 
-                  className="bg-orange-400 h-3 rounded-full transition-all duration-1000" 
-                  style={{ width: `${moduleProgressPercentage}%` }}
-                ></div>
-              </div>
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="p-3 bg-gray-50 dark:bg-gray-800 rounded-lg flex flex-col items-center">
-                <div className="flex items-baseline">
-                  <span className="text-4xl font-bold text-primary">{profile.progress.completedLessons}</span>
-                  <span className="text-gray-400 text-lg ml-1">/{profile.progress.totalLessons}</span>
-                </div>
-                <div className="text-sm text-gray-600 dark:text-gray-400 mt-1 text-center">
-                  Уроков пройдено
-                </div>
-              </div>
-              <div className="p-3 bg-gray-50 dark:bg-gray-800 rounded-lg flex flex-col items-center">
-                <div className="flex items-baseline">
-                  <span className="text-4xl font-bold text-orange-400">{profile.progress.completedModules}</span>
-                  <span className="text-gray-400 text-lg ml-1">/{profile.progress.totalModules}</span>
-                </div>
-                <div className="text-sm text-gray-600 dark:text-gray-400 mt-1 text-center">
-                  Модулей завершено
-                </div>
-              </div>
-            </div>
-          </Card>
-          
-          {/* Доступные шаблоны */}
-          <Card className="mb-6">
-            <h3 className="text-xl font-bold mb-4">Доступные шаблоны</h3>
-            <p className="text-gray-600 dark:text-gray-400 mb-4">
-              Шаблоны и чек-листы, которые помогут вам в работе с Wildberries.
-            </p>
-            <Button 
-              variant="primary" 
-              fullWidth
-              onClick={() => navigate('/templates')}
-            >
-              Перейти к шаблонам
-            </Button>
-          </Card>
-        </div>
-      )}
-      
-      {activeTab === 'achievements' && (
-        <div className="animate-fade-in">
-          {/* Достижения */}
-          <div className="space-y-3">
-            {profile.achievements.map((achievement) => (
-              <div 
-                key={achievement.id}
-                className={`p-3 bg-white dark:bg-gray-900 rounded-lg border ${
-                  achievement.unlocked 
-                    ? 'border-primary' 
-                    : 'border-gray-200 dark:border-gray-700'
-                } transition-all duration-200 animate-slide-in-right ${
-                  !achievement.unlocked && 'opacity-70'
-                }`}
-              >
-                <div className="flex items-center">
-                  <div className={`w-12 h-12 rounded-full flex items-center justify-center mr-3 ${
-                    achievement.unlocked 
-                      ? 'bg-primary/20 text-primary' 
-                      : 'bg-gray-200 dark:bg-gray-700 text-gray-500'
-                  }`}>
-                    <span className="text-xl">{achievement.icon}</span>
-                  </div>
-                  <div className="flex-1">
-                    <div className="text-base font-semibold">{achievement.title}</div>
-                    <div className="text-xs text-gray-600 dark:text-gray-400">
-                      {achievement.description}
-                    </div>
-                  </div>
-                  {achievement.unlocked && (
-                    <div className="ml-auto text-primary text-xl">✓</div>
-                  )}
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-      
-      {/* Кнопка подписки */}
-      {profile.subscriptionStatus === 'inactive' && (
-        <div className="fixed bottom-20 left-0 right-0 p-4 bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-700">
-          <Button 
-            variant="accent" 
-            size="lg"
-            fullWidth
-            onClick={handleSubscribe}
-          >
-            Оформить подписку
-          </Button>
         </div>
       )}
     </div>
