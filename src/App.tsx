@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { HashRouter as Router, Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-dom';
+import { HashRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { useAuth, AuthProvider } from './hooks/useAuth.tsx';
 import BottomNavigation from './components/BottomNavigation';
 
@@ -28,13 +28,6 @@ declare global {
     tgWebAppLogs?: any[];
     tgWebAppErrors?: any[];
   }
-  
-  // Определяем интерфейс для CustomEvent с detail
-  interface TelegramHashChangeEvent extends CustomEvent {
-    detail: {
-      hash: string;
-    };
-  }
 }
 
 // Защищенный маршрут
@@ -50,61 +43,6 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   }
   
   return isAuthenticated ? <>{children}</> : <Navigate to="/" replace />;
-};
-
-// Компонент для обработки инициализации приложения
-const AppInitializer = () => {
-  const navigate = useNavigate();
-  const location = useLocation();
-  
-  // Выполняется только один раз при монтировании компонента
-  useEffect(() => {
-    // Маркируем, что React приложение смонтировано
-    window.reactAppMounted = true;
-    
-    console.log('React приложение инициализировано, текущий путь:', location.pathname);
-    
-    // Проверяем, есть ли отложенная навигация
-    if (window.pendingNavigationPath) {
-      const path = window.pendingNavigationPath;
-      window.pendingNavigationPath = undefined; // Очищаем
-      
-      console.log('Обрабатываем отложенную навигацию:', path);
-      
-      // Используем setTimeout, чтобы дать время на инициализацию роутера
-      setTimeout(() => {
-        navigate(path, { replace: true });
-      }, 100);
-    }
-    
-    // Синхронизируем текущий путь с хешем в URL
-    const currentHashPath = window.location.hash.replace('#', '') || '/';
-    if (currentHashPath !== location.pathname && currentHashPath !== '/') {
-      console.log('Синхронизируем путь с хешем:', currentHashPath);
-      navigate(currentHashPath, { replace: true });
-    }
-    
-    // Слушаем изменения хеша для внешних источников
-    const handleHashChange = () => {
-      const hash = window.location.hash.replace('#', '') || '/';
-      
-      console.log('Обработчик hashchange:', hash, 'текущий путь:', location.pathname);
-      
-      if (hash !== location.pathname) {
-        console.log('Обновляем путь из-за изменения хеша');
-        navigate(hash, { replace: true });
-      }
-    };
-    
-    window.addEventListener('hashchange', handleHashChange);
-    
-    return () => {
-      window.removeEventListener('hashchange', handleHashChange);
-      window.reactAppMounted = false;
-    };
-  }, [navigate, location.pathname]);
-  
-  return null; // Компонент не рендерит ничего
 };
 
 function AppContent() {
@@ -143,9 +81,6 @@ function AppContent() {
 
   return (
     <div className="app min-h-screen bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white telegram-page-transition">
-      {/* Инициализатор приложения */}
-      <AppInitializer />
-      
       <Routes>
         {/* Публичные маршруты */}
         <Route path="/" element={<HomePage />} />
@@ -197,6 +132,7 @@ function AppContent() {
 }
 
 function App() {
+  // Запускаем в HashRouter, который лучше всего работает в Telegram WebApp
   return (
     <Router>
       <AuthProvider>

@@ -6,9 +6,11 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
+    "build:hash": "VITE_USE_HASH_ROUTER=true vite build",
     "lint": "eslint .",
     "preview": "vite preview",
-    "deploy": "npm run build && gh-pages -d dist"
+    "deploy": "npm run build && gh-pages -d dist",
+    "deploy:vercel": "npm run build:hash && npx vercel --prod"
   },
   "dependencies": {
     "@emotion/react": "^11.14.0",

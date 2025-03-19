@@ -12,22 +12,6 @@
     <title>WB Simple - Образовательная платформа</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <script type="text/javascript">
-      // Глобальные переменные для дебага
-      window.tgWebAppErrors = [];
-      window.tgWebAppLogs = [];
-      
-      // Перехватываем консоль для дебага в Telegram WebApp
-      const originalConsoleLog = console.log;
-      const originalConsoleError = console.error;
-      console.log = function() {
-        window.tgWebAppLogs.push(Array.from(arguments));
-        originalConsoleLog.apply(console, arguments);
-      };
-      console.error = function() {
-        window.tgWebAppErrors.push(Array.from(arguments));
-        originalConsoleError.apply(console, arguments);
-      };
-      
       // Инициализация Telegram WebApp
       (function() {
         try {
@@ -39,49 +23,19 @@
             tgApp.ready();
             tgApp.expand();
             
-            // Определяем функцию для безопасной навигации
+            // Упрощенная безопасная навигация для Telegram WebApp
             window.safeTelegramNavigation = function(path) {
               console.log('Запрошена навигация к:', path);
               
               try {
-                // Преобразуем путь в хеш-формат
-                let targetHash;
-                if (path === '/') {
-                  targetHash = '#/';
-                } else {
-                  targetHash = '#' + path;
-                }
-                
-                // Если инициализация React еще не завершена, сохраняем целевой путь
-                if (!window.reactAppMounted) {
-                  window.pendingNavigationPath = path;
-                  console.log('React еще не инициализирован, сохраняем путь для последующей навигации');
-                  return;
-                }
-                
-                // Изменяем хеш-фрагмент URL
-                if (window.location.hash !== targetHash) {
-                  // Отправляем тактильный отклик
-                  tgApp.HapticFeedback?.impactOccurred('light');
-                  
-                  // Меняем хеш в URL
-                  window.location.hash = path;
-                  
-                  console.log('Хеш обновлен на:', targetHash);
-                  
-                  // Для навигации на главную страницу
-                  if (path === '/' && targetHash === '#/') {
-                    window.location.hash = '/';
-                  }
-                } else {
-                  console.log('Уже находимся по этому пути');
-                }
+                // Меняем хеш в URL
+                window.location.hash = path;
               } catch (error) {
                 console.error('Ошибка при навигации:', error);
               }
             };
             
-            // Переопределяем поведение ссылок
+            // Блокируем стандартное поведение ссылок
             document.addEventListener('click', function(e) {
               const link = e.target.closest('a');
               if (link && !e.defaultPrevented) {
@@ -90,17 +44,16 @@
                 if (!href) return;
                 
                 if (href.startsWith('#')) {
-                  // Это уже хеш-ссылка, просто пропускаем
+                  // Это уже хеш-ссылка, пропускаем
                   return;
                 }
                 
                 // Блокируем стандартное поведение
                 e.preventDefault();
-                e.stopPropagation();
                 
                 if (href.startsWith('/')) {
                   // Внутренняя навигация
-                  window.safeTelegramNavigation(href);
+                  window.location.hash = href;
                 } else if (href.startsWith('http')) {
                   // Внешняя ссылка
                   tgApp.openLink(href);
@@ -115,7 +68,7 @@
               
               if (url.startsWith('/')) {
                 // Внутренняя навигация
-                window.safeTelegramNavigation(url);
+                window.location.hash = url;
                 return null;
               } else if (url.startsWith('http')) {
                 // Внешняя ссылка
@@ -125,36 +78,15 @@
               
               return originalWindowOpen.call(window, url, target, features);
             };
-            
-            // Добавляем CSS-класс для стилизации
-            document.documentElement.classList.add('telegram-app');
-            
-            // Помечаем, что инициализация Telegram WebApp завершена
-            window.tgInitComplete = true;
-            
-            console.log('Telegram WebApp инициализирован успешно');
-          } else {
-            console.log('Telegram WebApp недоступен, работаем в обычном режиме');
-            window.tgInitComplete = true; // Все равно помечаем как готовый
           }
+          
+          // В любом случае отмечаем как готовый
+          window.tgInitComplete = true;
         } catch (error) {
           console.error('Ошибка при инициализации Telegram WebApp:', error);
-          window.tgInitComplete = true; // Все равно помечаем как готовый
+          window.tgInitComplete = true;
         }
       })();
-      
-      // Маркер для React приложения
-      window.reactAppMounted = false;
-      
-      // Не блокируем загрузку страницы
-      window.addEventListener('load', function() {
-        setTimeout(function() {
-          if (!window.tgInitComplete) {
-            console.warn('Telegram WebApp не был инициализирован в течение 2 секунд, принудительно помечаем как готовый');
-            window.tgInitComplete = true;
-          }
-        }, 2000);
-      });
     </script>
     <style>
       /* Основные стили для Telegram WebApp */
@@ -171,24 +103,10 @@
         -webkit-tap-highlight-color: transparent;
       }
       
-      .telegram-app button {
-        -webkit-tap-highlight-color: transparent;
-        cursor: pointer;
-      }
-      
-      /* Улучшенные стили для анимации перехода страниц */
-      .telegram-page-transition {
-        animation: telegram-fade-in 0.2s ease-in-out;
-      }
-      
-      @keyframes telegram-fade-in {
-        from { opacity: 0.7; transform: translateY(10px); }
-        to { opacity: 1; transform: translateY(0); }
-      }
-      
       /* Стили для элементов навигации */
       a, button {
         -webkit-tap-highlight-color: transparent !important;
+        cursor: pointer;
       }
       
       /* Фикс для предотвращения скролла и зума */
