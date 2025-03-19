@@ -187,28 +187,17 @@
               logTelegram('Запрошена навигация к: ' + path);
               
               try {
-                // Нормализуем путь, если нужно
-                const hashPath = path.startsWith('/') ? path : '/' + path;
+                // Нормализуем путь
+                const normalizedPath = path.startsWith('/') ? path : '/' + path;
                 
-                // Для Telegram WebApp используем более прямой подход
-                // Установка хеша в URL - это безопаснее и более предсказуемо
-                // Это запустит событие hashchange, которое HashRouter поймет
-                window.location.hash = hashPath;
+                // Просто обновляем URL с хешем
+                window.location.href = '/#' + normalizedPath;
                 
-                // Показываем кнопку назад для любой страницы, кроме главной
-                if (tgApp.BackButton && hashPath !== '/') {
-                  tgApp.BackButton.show();
-                } else if (tgApp.BackButton) {
-                  tgApp.BackButton.hide();
-                }
-                
-                // Сбрасываем скролл вверх
-                window.scrollTo(0, 0);
-                
-                logTelegram('Навигация успешно выполнена к: ' + hashPath);
+                // Логируем
+                logTelegram('Навигация выполнена к: ' + normalizedPath);
                 return true;
-              } catch (navError) {
-                logError(navError);
+              } catch (error) {
+                logError(error);
                 return false;
               }
             };

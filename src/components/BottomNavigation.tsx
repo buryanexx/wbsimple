@@ -1,4 +1,4 @@
-import { useLocation, useNavigate } from 'react-router-dom';
+import { useLocation } from 'react-router-dom';
 import { useWebApp } from '@vkruglikov/react-telegram-web-app';
 import { useEffect, useState } from 'react';
 import Icon from './Icon';
@@ -7,134 +7,39 @@ const BottomNavigation = () => {
   const location = useLocation();
   const webApp = useWebApp();
   const [activeRoute, setActiveRoute] = useState('/');
-  const navigate = useNavigate();
   
-  // Эффект для обновления активного маршрута при изменении местоположения
+  // Получаем текущий путь из pathname
   useEffect(() => {
-    // Получаем текущий путь из react-router-dom
     setActiveRoute(location.pathname);
-    
-    if (window.tgWebAppLogs) {
-      window.tgWebAppLogs.push({
-        time: new Date().toISOString(),
-        message: `Обновление активного пути: ${location.pathname}`
-      });
-    }
+    console.log('Активный путь обновлен:', location.pathname);
   }, [location]);
-  
-  // Обновляем активный путь при изменении location
-  useEffect(() => {
-    // Используем pathname из react-router для браузера
-    // и хеш для Telegram WebApp
-    const currentPath = location.pathname !== '/' 
-      ? location.pathname 
-      : '';
-      
-    setActiveRoute(currentPath);
-    
-    // Логируем для отладки
-    if (window.tgWebAppLogs) {
-      window.tgWebAppLogs.push({
-        time: new Date().toISOString(),
-        message: `Navigation активный путь: ${currentPath}, hash: ${window.location.hash}, pathname: ${location.pathname}`
-      });
-    }
-    
-    // Настройка кнопки назад в Telegram WebApp
-    if (webApp?.BackButton) {
-      if (currentPath !== '/' && currentPath !== '') {
-        webApp.BackButton.show();
-      } else {
-        webApp.BackButton.hide();
-      }
-    }
-  }, [location, webApp]);
   
   // Проверяем, находимся ли мы на странице урока
   const isLessonPage = activeRoute.includes('/lesson/');
-  
-  // Если мы на странице урока, не показываем навигацию
-  if (isLessonPage) {
-    return null;
-  }
+  if (isLessonPage) return null;
 
-  // Оптимизированные элементы навигации (4 пункта)
+  // Элементы навигации
   const navItems = [
-    {
-      name: 'Главная',
-      path: '/',
-      icon: 'home'
-    },
-    {
-      name: 'Модули',
-      path: '/modules',
-      icon: 'modules'
-    },
-    {
-      name: 'Шаблоны',
-      path: '/templates',
-      icon: 'templates'
-    },
-    {
-      name: 'Профиль',
-      path: '/profile',
-      icon: 'profile'
-    }
+    { name: 'Главная', path: '/', icon: 'home' },
+    { name: 'Модули', path: '/modules', icon: 'modules' },
+    { name: 'Шаблоны', path: '/templates', icon: 'templates' },
+    { name: 'Профиль', path: '/profile', icon: 'profile' }
   ] as const;
-
-  // Обработчик навигации специально для Telegram WebApp
-  const handleNavigation = (e: React.MouseEvent<HTMLAnchorElement>, path: string) => {
-    e.preventDefault();
-    
-    // Если мы уже на этом пути, ничего не делаем
-    if (location.pathname === path) {
-      console.log('Уже находимся на странице:', path);
-      return;
-    }
-    
-    console.log('Переход на путь:', path);
-    
-    // Показываем индикатор загрузки в Telegram
-    if (webApp?.MainButton) {
-      webApp.MainButton.showProgress();
-      setTimeout(() => {
-        webApp.MainButton.hideProgress();
-      }, 300);
-    }
-    
-    // ВАЖНО: используем только один механизм навигации!
-    // Для HashRouter подходит и то, и другое. Выбираем navigate().
-    navigate(path);
-    
-    // Сбрасываем скролл наверх
-    window.scrollTo(0, 0);
-    
-    // Логируем для отладки
-    if (window.tgWebAppLogs) {
-      window.tgWebAppLogs.push({
-        time: new Date().toISOString(),
-        message: `Выполнена навигация к: ${path}`
-      });
-    }
-  };
 
   return (
     <div className="fixed bottom-0 left-0 right-0 bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 shadow-lg z-50">
       <div className="flex justify-around">
         {navItems.map((item) => {
-          // Проверяем активный пункт
+          // Определяем активность
           const isActive = 
             item.path === activeRoute || 
             (item.path === '/' && (activeRoute === '' || activeRoute === '/')) ||
             (activeRoute.startsWith(item.path) && item.path !== '/');
-            
-          console.log(`Проверка активности ${item.path}:`, isActive);
           
           return (
             <a
               key={item.path}
-              href={`#${item.path}`}
-              onClick={(e) => handleNavigation(e, item.path)}
+              href={`/#${item.path}`} // Прямая ссылка с хешем
               className={`flex flex-col items-center py-2 px-3 transition-colors duration-200 ${
                 isActive
                   ? 'text-primary'
