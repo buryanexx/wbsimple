@@ -14,37 +14,56 @@
     <script type="text/javascript">
       // Инициализация Telegram WebApp с улучшенной навигацией
       (function() {
+        // Глобальные переменные для хранения логов и состояния
+        window.tgWebAppLogs = [];
+        window.tgWebAppErrors = [];
+        window.tgInitData = {};
+        window.tgInitParams = {};
+        
+        function logTelegram(message) {
+          if (window.tgWebAppLogs) {
+            window.tgWebAppLogs.push({
+              time: new Date().toISOString(),
+              message: message
+            });
+          }
+          console.log('[TG WebApp]', message);
+        }
+        
+        function logError(error) {
+          if (window.tgWebAppErrors) {
+            window.tgWebAppErrors.push({
+              time: new Date().toISOString(),
+              error: error.message || error
+            });
+          }
+          console.error('[TG WebApp Error]', error);
+        }
+        
+        function parseInitData(initDataRaw) {
+          try {
+            if (!initDataRaw) return {};
+            const result = {};
+            initDataRaw.split('&').forEach(function(pair) {
+              const parts = pair.split('=');
+              if (parts.length === 2) {
+                result[decodeURIComponent(parts[0])] = decodeURIComponent(parts[1]);
+              }
+            });
+            return result;
+          } catch (e) {
+            logError('Ошибка разбора initData: ' + e);
+            return {};
+          }
+        }
+        
         try {
-          // Логирование для отладки
-          window.tgWebAppLogs = [];
-          window.tgWebAppErrors = [];
-          
-          function logTelegram(message) {
-            if (window.tgWebAppLogs) {
-              window.tgWebAppLogs.push({
-                time: new Date().toISOString(),
-                message: message
-              });
-            }
-            console.log('[TG WebApp]', message);
-          }
-          
-          function logError(error) {
-            if (window.tgWebAppErrors) {
-              window.tgWebAppErrors.push({
-                time: new Date().toISOString(),
-                error: error.message || error
-              });
-            }
-            console.error('[TG WebApp Error]', error);
-          }
-          
           // Получаем доступ к Telegram WebApp API
           const tgApp = window.Telegram?.WebApp;
           logTelegram('Инициализация WebApp ' + (tgApp ? 'успешно' : 'не удалась'));
           
           if (tgApp) {
-            // Базовая инициализация
+            // 1. Базовая инициализация
             try {
               tgApp.ready();
               tgApp.expand();
@@ -57,23 +76,75 @@
               document.documentElement.style.setProperty('--tg-theme-button-color', tgApp.buttonColor || '#2481cc');
               document.documentElement.style.setProperty('--tg-theme-button-text-color', tgApp.buttonTextColor || '#ffffff');
               
-              logTelegram('WebApp инициализирован, стили применены');
+              // 2. Парсим initData для авторизации и параметров
+              if (tgApp.initData) {
+                window.tgInitData = parseInitData(tgApp.initData);
+                logTelegram('InitData получены: ' + JSON.stringify(window.tgInitData));
+                
+                // Проверяем наличие startapp параметра
+                if (window.tgInitData.start_param) {
+                  window.tgInitParams.startapp = window.tgInitData.start_param;
+                  logTelegram('Обнаружен startapp параметр: ' + window.tgInitParams.startapp);
+                }
+              }
+              
+              // 3. Настройка BackButton
+              if (tgApp.BackButton) {
+                tgApp.BackButton.isVisible = false;
+                tgApp.BackButton.onClick(function() {
+                  logTelegram('BackButton нажата');
+                  
+                  // Получаем текущий путь из хеша
+                  const hash = window.location.hash;
+                  const currentPath = hash ? hash.substring(1) : '/';
+                  
+                  if (currentPath !== '/') {
+                    // Возвращаемся на главную страницу
+                    window.location.hash = '/';
+                    logTelegram('Навигация назад к главной странице');
+                  }
+                });
+              }
+              
+              // 4. Настройка начальной навигации по startapp
+              setTimeout(function() {
+                if (window.tgInitParams.startapp) {
+                  const startPath = window.tgInitParams.startapp;
+                  // Если это не главная страница, выполняем навигацию
+                  if (startPath !== '/' && startPath !== '') {
+                    window.location.hash = startPath.startsWith('/') ? startPath : '/' + startPath;
+                    logTelegram('Выполнена начальная навигация к: ' + startPath);
+                  }
+                }
+              }, 100);
+              
+              logTelegram('WebApp успешно инициализирован');
             } catch (initError) {
               logError(initError);
             }
             
-            // Улучшенная навигация для Telegram WebApp
+            // 5. Улучшенная навигация для Telegram WebApp
             window.safeTelegramNavigation = function(path) {
               logTelegram('Запрошена навигация к: ' + path);
               
               try {
-                // Убираем слеш в начале пути для хеш-навигации
+                // Нормализуем путь, если нужно
                 const hashPath = path.startsWith('/') ? path : '/' + path;
                 
                 // Используем только хеш-навигацию
                 window.location.hash = hashPath;
                 
-                logTelegram('Навигация выполнена к: ' + hashPath);
+                // Показываем кнопку назад для любой страницы, кроме главной
+                if (tgApp.BackButton && hashPath !== '/') {
+                  tgApp.BackButton.show();
+                } else if (tgApp.BackButton) {
+                  tgApp.BackButton.hide();
+                }
+                
+                // Сбрасываем скролл вверх
+                window.scrollTo(0, 0);
+                
+                logTelegram('Навигация успешно выполнена к: ' + hashPath);
                 return true;
               } catch (navError) {
                 logError(navError);
@@ -81,7 +152,7 @@
               }
             };
             
-            // Делаем глобальный перехват всех кликов по ссылкам
+            // 6. Делаем глобальный перехват всех кликов по ссылкам
             document.addEventListener('click', function(e) {
               try {
                 // Ищем ссылку в событии клика
@@ -93,18 +164,21 @@
                 
                 logTelegram('Клик по ссылке: ' + href);
                 
-                // Если это уже хеш-ссылка, пропускаем
-                if (href.startsWith('#/') || href === '#') {
+                // Если это уже хеш-ссылка, обрабатываем
+                if (href.startsWith('#')) {
+                  // Если не простой якорь, а хеш-маршрут
+                  if (href.startsWith('#/')) {
+                    e.preventDefault();
+                    const path = href.substring(1); // Удаляем #
+                    window.safeTelegramNavigation(path);
+                  }
                   return;
                 }
                 
-                // Блокируем стандартное поведение
+                // Блокируем стандартное поведение для других ссылок
                 e.preventDefault();
                 
-                if (href.startsWith('#')) {
-                  // Якорная ссылка, не хеш-маршрут
-                  window.location.hash = href;
-                } else if (href.startsWith('/')) {
+                if (href.startsWith('/')) {
                   // Внутренняя навигация
                   window.safeTelegramNavigation(href);
                 } else if (href.startsWith('http')) {
@@ -117,7 +191,7 @@
               }
             }, { capture: true });
             
-            // Улучшенный перехват window.open
+            // 7. Улучшенный перехват window.open
             const originalWindowOpen = window.open;
             window.open = function(url, target, features) {
               if (!url) return originalWindowOpen.call(window, url, target, features);
@@ -141,15 +215,27 @@
               return originalWindowOpen.call(window, url, target, features);
             };
             
-            // Слушаем события приложения
+            // 8. Слушаем события приложения
             tgApp.onEvent('viewportChanged', function() {
               logTelegram('Изменение размера viewport');
             });
             
-            // Перехватываем хеш-изменения
+            // 9. Перехватываем хеш-изменения
             window.addEventListener('hashchange', function(e) {
               logTelegram('Изменение хеша: ' + window.location.hash);
+              
+              // Обновляем состояние кнопки назад
+              const path = window.location.hash.replace('#', '') || '/';
+              if (tgApp.BackButton) {
+                if (path !== '/' && path !== '') {
+                  tgApp.BackButton.show();
+                } else {
+                  tgApp.BackButton.hide();
+                }
+              }
             });
+          } else {
+            logTelegram('Telegram WebApp API не обнаружен, приложение запущено в браузере');
           }
           
           // В любом случае отмечаем как готовый
@@ -157,7 +243,7 @@
           logTelegram('Инициализация завершена');
           
         } catch (error) {
-          console.error('Ошибка при инициализации Telegram WebApp:', error);
+          console.error('Критическая ошибка при инициализации Telegram WebApp:', error);
           window.tgInitComplete = true;
           
           if (window.tgWebAppErrors) {

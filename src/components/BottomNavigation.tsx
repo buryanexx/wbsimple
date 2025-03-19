@@ -1,14 +1,51 @@
 import { useLocation } from 'react-router-dom';
-import Icon from './Icon';
 import { useWebApp } from '@vkruglikov/react-telegram-web-app';
+import { useEffect, useState } from 'react';
+import Icon from './Icon';
 
 const BottomNavigation = () => {
   const location = useLocation();
   const webApp = useWebApp();
-  const currentPath = location.pathname;
+  const [activeRoute, setActiveRoute] = useState('/');
+  
+  // Функция для получения текущего пути из хеша URL
+  const getPathFromHash = () => {
+    const hash = window.location.hash;
+    if (!hash) return '/';
+    // Удаляем # и получаем чистый путь
+    return hash.startsWith('#/') ? hash.substring(1) : hash.replace('#', '/');
+  };
+  
+  // Обновляем активный путь при изменении location
+  useEffect(() => {
+    // Используем pathname из react-router для браузера
+    // и хеш для Telegram WebApp
+    const currentPath = location.pathname !== '/' 
+      ? location.pathname 
+      : getPathFromHash();
+      
+    setActiveRoute(currentPath);
+    
+    // Логируем для отладки
+    if (window.tgWebAppLogs) {
+      window.tgWebAppLogs.push({
+        time: new Date().toISOString(),
+        message: `Navigation активный путь: ${currentPath}, hash: ${window.location.hash}, pathname: ${location.pathname}`
+      });
+    }
+    
+    // Настройка кнопки назад в Telegram WebApp
+    if (webApp?.BackButton) {
+      if (currentPath !== '/' && currentPath !== '') {
+        webApp.BackButton.show();
+      } else {
+        webApp.BackButton.hide();
+      }
+    }
+  }, [location, webApp]);
   
   // Проверяем, находимся ли мы на странице урока
-  const isLessonPage = currentPath.includes('/lesson/');
+  const isLessonPage = activeRoute.includes('/lesson/');
   
   // Если мы на странице урока, не показываем навигацию
   if (isLessonPage) {
@@ -43,7 +80,14 @@ const BottomNavigation = () => {
   const handleNavigation = (e: React.MouseEvent<HTMLAnchorElement>, path: string) => {
     e.preventDefault();
     
-    // Добавляем индикатор загрузки
+    if (window.tgWebAppLogs) {
+      window.tgWebAppLogs.push({
+        time: new Date().toISOString(),
+        message: `Навигация к: ${path}`
+      });
+    }
+    
+    // Показываем индикатор загрузки в Telegram
     if (webApp?.MainButton) {
       webApp.MainButton.showProgress();
       setTimeout(() => {
@@ -51,22 +95,22 @@ const BottomNavigation = () => {
       }, 500);
     }
     
-    // Безопасная навигация через хеш
+    // Для Telegram WebApp используем только хеш-навигацию
     window.location.hash = path;
     
-    // Если доступна функция безопасной навигации для Telegram
-    if (window.safeTelegramNavigation) {
-      window.safeTelegramNavigation(path);
-    }
+    // Сбрасываем скролл наверх
+    window.scrollTo(0, 0);
   };
 
   return (
     <div className="fixed bottom-0 left-0 right-0 bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 shadow-lg z-50">
       <div className="flex justify-around">
         {navItems.map((item) => {
-          // Проверяем активный пункт по текущему хешу
-          const isActive = currentPath === item.path || 
-                          (currentPath === '' && item.path === '/');
+          // Проверяем активный пункт
+          const isActive = 
+            item.path === activeRoute || 
+            (item.path === '/' && (activeRoute === '' || activeRoute === '/')) ||
+            (activeRoute.startsWith(item.path) && item.path !== '/');
           
           return (
             <a

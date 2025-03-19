@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { useWebApp } from '@vkruglikov/react-telegram-web-app';
-import { API_URL, AUTH_CONFIG } from '../config';
+import { API_URL, AUTH_CONFIG, telegramHelpers } from '../config';
 
 // Интерфейс для пользователя
 export interface User {
@@ -25,17 +25,13 @@ interface AuthContextType {
   user: User | null;
   loading: boolean;
   error: string | null;
-  login: (initData: string) => Promise<void>;
-  logout: () => void;
   isAuthenticated: boolean;
-  isPremium: boolean;
-  hasCompletedLesson: (lessonId: number) => boolean;
-  hasCompletedModule: (moduleId: number) => boolean;
-  markLessonCompleted: (lessonId: number) => Promise<void>;
-  refreshUserData: () => Promise<void>;
+  login: (telegramId: number) => Promise<void>;
+  logout: () => void;
+  updateUser: (userData: Partial<User>) => void;
 }
 
-// Создаем контекст аутентификации
+// Создаем контекст
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 // Провайдер аутентификации
@@ -45,187 +41,222 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const [error, setError] = useState<string | null>(null);
   const webApp = useWebApp();
 
-  // Проверяем, аутентифицирован ли пользователь
-  const isAuthenticated = !!user;
-  
-  // Проверяем, есть ли у пользователя активная подписка
-  const isPremium = user?.hasActiveSubscription || false;
-
-  // Проверяем, завершил ли пользователь урок
-  const hasCompletedLesson = (lessonId: number): boolean => {
-    if (!user?.progress?.completedLessons) return false;
-    return user.progress.completedLessons.includes(lessonId);
-  };
-
-  // Проверяем, завершил ли пользователь модуль
-  const hasCompletedModule = (moduleId: number): boolean => {
-    if (!user?.progress?.completedModules) return false;
-    return user.progress.completedModules.includes(moduleId);
-  };
-
-  // Отмечаем урок как завершенный
-  const markLessonCompleted = async (lessonId: number): Promise<void> => {
-    if (!user) return;
-
-    try {
-      const response = await fetch(`${API_URL}/api/lessons/${lessonId}/complete`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${user.token}`,
-        },
-      });
-
-      if (!response.ok) {
-        throw new Error('Не удалось отметить урок как завершенный');
-      }
-
-      // Обновляем данные пользователя
-      await refreshUserData();
-    } catch (err) {
-      console.error('Ошибка при отметке урока как завершенного:', err);
-      setError('Не удалось отметить урок как завершенный');
-    }
-  };
-
-  // Обновляем данные пользователя
-  const refreshUserData = async (): Promise<void> => {
-    if (!user) return;
-
-    try {
-      const response = await fetch(`${API_URL}/api/auth/me`, {
-        headers: {
-          Authorization: `Bearer ${user.token}`,
-        },
-      });
-
-      if (!response.ok) {
-        throw new Error('Не удалось получить данные пользователя');
-      }
-
-      const userData = await response.json();
-      setUser({ ...userData, token: user.token });
-    } catch (err) {
-      console.error('Ошибка при обновлении данных пользователя:', err);
-      setError('Не удалось обновить данные пользователя');
-    }
-  };
-
-  // Функция для входа пользователя
-  const login = async (initData: string): Promise<void> => {
-    try {
-      setLoading(true);
-      setError(null);
-
-      const response = await fetch(`${API_URL}/api/auth/login`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ initData }),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Ошибка аутентификации');
-      }
-
-      const data = await response.json();
-      
-      // Сохраняем данные пользователя и токен
-      setUser(data.user);
-      localStorage.setItem(AUTH_CONFIG.TOKEN_KEY, data.token);
-      localStorage.setItem(AUTH_CONFIG.USER_KEY, JSON.stringify(data.user));
-      localStorage.setItem(AUTH_CONFIG.INIT_DATA_KEY, initData);
-    } catch (err: any) {
-      console.error('Ошибка при входе:', err);
-      setError(err.message || 'Ошибка при входе');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Функция для выхода пользователя
-  const logout = (): void => {
-    setUser(null);
-    localStorage.removeItem(AUTH_CONFIG.TOKEN_KEY);
-    localStorage.removeItem(AUTH_CONFIG.USER_KEY);
-    localStorage.removeItem(AUTH_CONFIG.INIT_DATA_KEY);
-  };
-
-  // Проверяем наличие сохраненных данных пользователя при загрузке
+  // Проверка аутентификации при загрузке приложения
   useEffect(() => {
-    const initAuth = async () => {
+    const checkAuth = async () => {
       try {
-        setLoading(true);
-        
-        // Получаем сохраненные данные
-        const savedToken = localStorage.getItem(AUTH_CONFIG.TOKEN_KEY);
-        const savedUser = localStorage.getItem(AUTH_CONFIG.USER_KEY);
-        const savedInitData = localStorage.getItem(AUTH_CONFIG.INIT_DATA_KEY) || webApp?.initData;
+        // Проверяем сохраненный токен
+        const savedToken = localStorage.getItem(AUTH_CONFIG.storageTokenKey);
+        const savedUser = localStorage.getItem(AUTH_CONFIG.storageUserKey);
         
         if (savedToken && savedUser) {
-          // Если есть сохраненные данные, восстанавливаем сессию
-          const parsedUser = JSON.parse(savedUser);
-          setUser({ ...parsedUser, token: savedToken });
-          
-          // Для Telegram Web App в development режиме
-          if (!webApp && process.env.NODE_ENV === 'development') {
-            console.log('Разработка без Telegram Web App: аутентификация с локальным хранилищем');
-          }
-        } else if (savedInitData) {
-          // Если есть initData, пытаемся войти
-          await login(savedInitData);
-        } else if (process.env.NODE_ENV === 'development') {
-          // В режиме разработки без initData создаем тестового пользователя
-          setUser({
-            id: 1,
-            telegramId: 123456789,
-            firstName: 'Тестовый',
-            lastName: 'Пользователь',
-            isAdmin: false,
-            hasActiveSubscription: true,
-            token: 'test-token',
-            progress: {
-              completedLessons: [],
-              completedModules: []
+          // Проверяем токен
+          const response = await fetch(`${API_URL}/auth/check`, {
+            method: 'GET',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${savedToken}`
             }
           });
-          console.log('Разработка: включен тестовый пользователь для навигации');
+          
+          if (response.ok) {
+            // Если токен валидный, устанавливаем пользователя из localStorage
+            setUser(JSON.parse(savedUser));
+          } else {
+            // Если токен невалидный, пробуем выполнить автоматический вход через Telegram
+            await tryTelegramAuth();
+          }
+        } else {
+          // Если нет токена, пробуем выполнить автоматический вход через Telegram
+          await tryTelegramAuth();
         }
       } catch (err) {
-        console.error('Ошибка при инициализации аутентификации:', err);
+        console.error('Ошибка при проверке аутентификации:', err);
+        setError('Ошибка при проверке аутентификации');
       } finally {
         setLoading(false);
       }
     };
-
-    initAuth();
+    
+    checkAuth();
   }, [webApp]);
-
+  
+  // Попытка авторизации через Telegram WebApp
+  const tryTelegramAuth = async () => {
+    if (!telegramHelpers.isRunningInTelegram()) {
+      console.log('Не запущено в Telegram WebApp, авторизацию нужно выполнить вручную');
+      return;
+    }
+    
+    try {
+      const tgUser = telegramHelpers.getTelegramUser();
+      
+      if (!tgUser) {
+        console.log('Нет данных пользователя в Telegram WebApp');
+        return;
+      }
+      
+      // Получаем данные initData для проверки на сервере
+      const initData = telegramHelpers.getInitData();
+      
+      // Отправляем запрос на авторизацию с использованием initData
+      const response = await fetch(`${API_URL}/auth/telegram`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ initData })
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        
+        // Логируем для отладки
+        console.log('Успешная аутентификация через Telegram:', data);
+        
+        // Создаем объект пользователя из данных API
+        const authenticatedUser: User = {
+          id: data.user.id,
+          telegramId: tgUser.id,
+          firstName: tgUser.first_name,
+          lastName: tgUser.last_name,
+          username: tgUser.username,
+          photoUrl: tgUser.photo_url,
+          isAdmin: data.user.isAdmin || false,
+          hasActiveSubscription: data.user.hasActiveSubscription || false,
+          subscriptionEndDate: data.user.subscriptionEndDate,
+          token: data.token,
+          progress: data.user.progress || { completedLessons: [], completedModules: [] }
+        };
+        
+        // Сохраняем данные пользователя и токен
+        localStorage.setItem(AUTH_CONFIG.storageUserKey, JSON.stringify(authenticatedUser));
+        localStorage.setItem(AUTH_CONFIG.storageTokenKey, data.token);
+        
+        // Устанавливаем пользователя в состояние
+        setUser(authenticatedUser);
+        setError(null);
+        
+        return authenticatedUser;
+      } else {
+        const errorData = await response.json();
+        console.error('Ошибка авторизации через Telegram:', errorData);
+        setError(errorData.message || 'Ошибка авторизации через Telegram');
+        return null;
+      }
+    } catch (err) {
+      console.error('Ошибка при авторизации через Telegram:', err);
+      setError('Ошибка при авторизации через Telegram');
+      return null;
+    }
+  };
+  
+  // Функция для входа по telegramId (для тестирования)
+  const login = async (telegramId: number) => {
+    setLoading(true);
+    
+    try {
+      // Пробуем сначала выполнить автоматическую авторизацию через Telegram
+      const telegramUser = await tryTelegramAuth();
+      
+      if (telegramUser) {
+        setLoading(false);
+        return;
+      }
+      
+      // Если автоматическая авторизация не удалась, используем ручной вход по telegramId
+      const response = await fetch(`${API_URL}/auth/login`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ telegramId })
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        
+        // Создаем объект пользователя из данных API
+        const authenticatedUser: User = {
+          id: data.user.id,
+          telegramId: data.user.telegramId,
+          firstName: data.user.firstName,
+          lastName: data.user.lastName,
+          username: data.user.username,
+          photoUrl: data.user.photoUrl,
+          isAdmin: data.user.isAdmin || false,
+          hasActiveSubscription: data.user.hasActiveSubscription || false,
+          subscriptionEndDate: data.user.subscriptionEndDate,
+          token: data.token,
+          progress: data.user.progress || { completedLessons: [], completedModules: [] }
+        };
+        
+        // Сохраняем данные пользователя и токен
+        localStorage.setItem(AUTH_CONFIG.storageUserKey, JSON.stringify(authenticatedUser));
+        localStorage.setItem(AUTH_CONFIG.storageTokenKey, data.token);
+        
+        // Устанавливаем пользователя в состояние
+        setUser(authenticatedUser);
+        setError(null);
+      } else {
+        const errorData = await response.json();
+        setError(errorData.message || 'Ошибка входа');
+      }
+    } catch (err) {
+      console.error('Ошибка при входе:', err);
+      setError('Ошибка при входе');
+    } finally {
+      setLoading(false);
+    }
+  };
+  
+  // Функция для выхода
+  const logout = () => {
+    // Удаляем данные из localStorage
+    localStorage.removeItem(AUTH_CONFIG.storageUserKey);
+    localStorage.removeItem(AUTH_CONFIG.storageTokenKey);
+    
+    // Сбрасываем состояние пользователя
+    setUser(null);
+    setError(null);
+  };
+  
+  // Функция для обновления данных пользователя
+  const updateUser = (userData: Partial<User>) => {
+    if (!user) return;
+    
+    const updatedUser = { ...user, ...userData };
+    setUser(updatedUser);
+    
+    // Обновляем данные в localStorage
+    localStorage.setItem(AUTH_CONFIG.storageUserKey, JSON.stringify(updatedUser));
+  };
+  
   // Значение контекста
   const value = {
     user,
     loading,
     error,
+    isAuthenticated: !!user,
     login,
     logout,
-    isAuthenticated,
-    isPremium,
-    hasCompletedLesson,
-    hasCompletedModule,
-    markLessonCompleted,
-    refreshUserData,
+    updateUser
   };
-
-  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+  
+  return (
+    <AuthContext.Provider value={value}>
+      {children}
+    </AuthContext.Provider>
+  );
 };
 
 // Хук для использования контекста аутентификации
-export const useAuth = (): AuthContextType => {
+export const useAuth = () => {
   const context = useContext(AuthContext);
+  
   if (context === undefined) {
     throw new Error('useAuth должен использоваться внутри AuthProvider');
   }
+  
   return context;
 }; 
