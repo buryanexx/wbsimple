@@ -47,7 +47,7 @@ declare global {
 }
 
 // API URL для запросов
-export const API_URL = import.meta.env.VITE_API_URL || 'https://api.your-production-server.com';
+export const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3002';
 
 // Настройки авторизации
 export const AUTH_CONFIG = {

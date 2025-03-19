@@ -1,4 +1,4 @@
-import { useLocation } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { useWebApp } from '@vkruglikov/react-telegram-web-app';
 import { useEffect, useState } from 'react';
 import Icon from './Icon';
@@ -7,14 +7,20 @@ const BottomNavigation = () => {
   const location = useLocation();
   const webApp = useWebApp();
   const [activeRoute, setActiveRoute] = useState('/');
+  const navigate = useNavigate();
   
-  // Функция для получения текущего пути из хеша URL
-  const getPathFromHash = () => {
-    const hash = window.location.hash;
-    if (!hash) return '/';
-    // Удаляем # и получаем чистый путь
-    return hash.startsWith('#/') ? hash.substring(1) : hash.replace('#', '/');
-  };
+  // Эффект для обновления активного маршрута при изменении местоположения
+  useEffect(() => {
+    // Получаем текущий путь из react-router-dom
+    setActiveRoute(location.pathname);
+    
+    if (window.tgWebAppLogs) {
+      window.tgWebAppLogs.push({
+        time: new Date().toISOString(),
+        message: `Обновление активного пути: ${location.pathname}`
+      });
+    }
+  }, [location]);
   
   // Обновляем активный путь при изменении location
   useEffect(() => {
@@ -22,7 +28,7 @@ const BottomNavigation = () => {
     // и хеш для Telegram WebApp
     const currentPath = location.pathname !== '/' 
       ? location.pathname 
-      : getPathFromHash();
+      : '';
       
     setActiveRoute(currentPath);
     
@@ -95,8 +101,8 @@ const BottomNavigation = () => {
       }, 500);
     }
     
-    // Для Telegram WebApp используем только хеш-навигацию
-    window.location.hash = path;
+    // Используем react-router-dom для навигации вместо прямого изменения хеша
+    navigate(path);
     
     // Сбрасываем скролл наверх
     window.scrollTo(0, 0);

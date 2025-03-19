@@ -131,8 +131,13 @@
                 // Нормализуем путь, если нужно
                 const hashPath = path.startsWith('/') ? path : '/' + path;
                 
-                // Используем только хеш-навигацию
-                window.location.hash = hashPath;
+                // Используем только хеш-навигацию 
+                if (window.location.hash === '#' + hashPath) {
+                  // Если уже находимся на этой странице, перезагружаем её
+                  window.dispatchEvent(new HashChangeEvent('hashchange'));
+                } else {
+                  window.location.hash = hashPath;
+                }
                 
                 // Показываем кнопку назад для любой страницы, кроме главной
                 if (tgApp.BackButton && hashPath !== '/') {

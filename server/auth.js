@@ -8,199 +8,181 @@ const crypto = require('crypto');
 const bodyParser = require('body-parser');
 
 const app = express();
-const PORT = process.env.PORT || 3001;
+const PORT = process.env.PORT || 3002;
 
-// Секретный ключ бота Telegram для проверки initData
-// В реальной системе нужно использовать BOT_TOKEN из env
-const BOT_SECRET = '5348958034:AAF4dQBFLp3hqTd9GxGP1dQvgF_JXLM0C9c';
+// Секретный токен бота (в реальном проекте должен храниться в переменных окружения)
+const BOT_TOKEN = '5348958034:AAF4dQBFLp3hqTd9GxGP1dQvgF_JXLM0C9c';
 
-// Временная база данных пользователей (для демонстрации)
-const usersDB = [];
+// База данных пользователей (в реальном проекте должна быть заменена на настоящую БД)
+const users = {
+  123456789: { // ID пользователя в Telegram
+    id: 1,
+    telegramId: 123456789,
+    firstName: 'Иван',
+    lastName: 'Иванов',
+    username: 'ivanov',
+    isAdmin: true,
+    hasActiveSubscription: true,
+    subscriptionEndDate: '2024-12-31',
+    progress: {
+      completedLessons: [1, 2, 3],
+      completedModules: [1]
+    }
+  }
+};
 
 // Middleware
 app.use(cors());
 app.use(bodyParser.json());
 
-/**
- * Проверка подписи данных из Telegram WebApp
- * @param {Object} data - Объект с данными из initData
- * @param {string} hash - Хеш для проверки
- */
-function verifyTelegramWebAppData(data, hash) {
-  // Удаляем hash из данных для подписи
-  const dataCheckString = Object.keys(data)
-    .filter(key => key !== 'hash')
-    .sort()
-    .map(key => `${key}=${data[key]}`)
-    .join('\n');
-
-  // Создаем проверочный хеш
-  const secretKey = crypto.createHmac('sha256', 'WebAppData').update(BOT_SECRET).digest();
-  const calculatedHash = crypto.createHmac('sha256', secretKey).update(dataCheckString).digest('hex');
-
-  return calculatedHash === hash;
-}
-
-/**
- * Парсинг initData из Telegram WebApp
- * @param {string} initDataString - Строка initData из Telegram WebApp
- */
-function parseInitData(initDataString) {
-  if (!initDataString) return null;
-
-  const params = new URLSearchParams(initDataString);
-  const result = {};
-
-  for (const [key, value] of params.entries()) {
-    result[key] = value;
+// Функция для проверки подписи данных Telegram WebApp
+function validateTelegramWebAppData(initData) {
+  // Парсим initData
+  const urlParams = new URLSearchParams(initData);
+  const hash = urlParams.get('hash');
+  
+  if (!hash) return false;
+  
+  // Удаляем hash из данных для проверки
+  urlParams.delete('hash');
+  
+  // Сортируем параметры по ключу в алфавитном порядке
+  const dataCheckArray = [];
+  for (const [key, value] of [...urlParams.entries()].sort()) {
+    dataCheckArray.push(`${key}=${value}`);
   }
-
-  return result;
+  
+  const dataCheckString = dataCheckArray.join('\n');
+  
+  // Создаем HMAC-SHA-256 с секретным ключом бота
+  const secretKey = crypto.createHash('sha256')
+    .update(BOT_TOKEN)
+    .digest();
+  
+  const hmac = crypto.createHmac('sha256', secretKey)
+    .update(dataCheckString)
+    .digest('hex');
+  
+  // Сравниваем полученный хеш с переданным
+  return hmac === hash;
 }
 
-// Авторизация через Telegram WebApp
+// Роут для проверки статуса сервера
+app.get('/', (req, res) => {
+  res.json({ message: 'Сервер аутентификации работает' });
+});
+
+// Роут для авторизации через Telegram
 app.post('/auth/telegram', (req, res) => {
   try {
     const { initData } = req.body;
-
-    if (!initData) {
-      return res.status(400).json({ success: false, message: 'Отсутствуют данные initData' });
-    }
-
-    // Парсим данные
-    const parsedData = parseInitData(initData);
     
-    if (!parsedData) {
-      return res.status(400).json({ success: false, message: 'Неверный формат initData' });
+    if (!initData) {
+      return res.status(400).json({ message: 'Отсутствуют данные инициализации' });
     }
-
-    // В реальном приложении здесь должна быть проверка подписи
-    // В демо пропускаем эту проверку
-    // if (!verifyTelegramWebAppData(parsedData, parsedData.hash)) {
-    //   return res.status(403).json({ success: false, message: 'Недействительная подпись' });
-    // }
-
-    // Проверяем, есть ли пользовательские данные
-    if (!parsedData.user) {
-      return res.status(400).json({ success: false, message: 'Отсутствуют данные пользователя' });
+    
+    // Проверяем подпись данных
+    const isValid = validateTelegramWebAppData(initData);
+    
+    if (!isValid) {
+      return res.status(401).json({ message: 'Неверная подпись данных инициализации' });
     }
-
-    // Преобразуем строку user в объект
-    const user = JSON.parse(parsedData.user);
-
-    // Проверяем, есть ли пользователь в базе
-    let existingUser = usersDB.find(u => u.telegramId === user.id);
-
-    if (!existingUser) {
-      // Создаем нового пользователя
-      const newUser = {
-        id: usersDB.length + 1,
-        telegramId: user.id,
-        firstName: user.first_name,
-        lastName: user.last_name,
-        username: user.username,
-        photoUrl: user.photo_url,
+    
+    // Парсим данные пользователя
+    const urlParams = new URLSearchParams(initData);
+    const userRaw = urlParams.get('user');
+    
+    if (!userRaw) {
+      return res.status(400).json({ message: 'Данные пользователя отсутствуют' });
+    }
+    
+    const telegramUser = JSON.parse(userRaw);
+    const telegramId = telegramUser.id;
+    
+    // Ищем пользователя в нашей "базе" или создаем нового
+    let user = users[telegramId];
+    
+    if (!user) {
+      // Это новый пользователь, создаем его
+      const newUserId = Object.keys(users).length + 1;
+      user = {
+        id: newUserId,
+        telegramId: telegramId,
+        firstName: telegramUser.first_name,
+        lastName: telegramUser.last_name || '',
+        username: telegramUser.username || '',
+        photoUrl: telegramUser.photo_url || '',
         isAdmin: false,
         hasActiveSubscription: false,
-        registeredAt: new Date(),
         progress: {
           completedLessons: [],
           completedModules: []
         }
       };
-
-      usersDB.push(newUser);
-      existingUser = newUser;
+      
+      // Сохраняем в нашу "базу"
+      users[telegramId] = user;
     }
-
-    // Генерируем JWT токен (для демонстрации упрощенно)
-    const token = crypto.randomBytes(64).toString('hex');
-
-    return res.status(200).json({
-      success: true,
+    
+    // Генерируем простой JWT-подобный токен (в реальном проекте следует использовать настоящий JWT)
+    const token = crypto.randomBytes(32).toString('hex');
+    
+    return res.json({
+      user,
       token,
-      user: existingUser
+      expires: Date.now() + 86400000 // Токен действителен 24 часа
     });
   } catch (error) {
     console.error('Ошибка авторизации:', error);
-    return res.status(500).json({ success: false, message: 'Внутренняя ошибка сервера' });
+    return res.status(500).json({ message: 'Внутренняя ошибка сервера' });
   }
 });
 
-// Проверка токена
+// Роут для проверки токена
 app.get('/auth/check', (req, res) => {
-  try {
-    // В реальном приложении здесь должна быть проверка JWT токена
-    const token = req.headers.authorization?.split(' ')[1];
-
-    if (!token) {
-      return res.status(401).json({ success: false, message: 'Токен отсутствует' });
-    }
-
-    // Для демонстрации всегда возвращаем успех
-    return res.status(200).json({ success: true });
-  } catch (error) {
-    console.error('Ошибка проверки токена:', error);
-    return res.status(500).json({ success: false, message: 'Внутренняя ошибка сервера' });
+  const authHeader = req.headers.authorization;
+  
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    return res.status(401).json({ message: 'Требуется авторизация' });
   }
+  
+  // В реальном проекте должна быть проверка настоящего JWT-токена
+  // Для простоты демо возвращаем успешный ответ
+  return res.json({ valid: true });
 });
 
-// Вход по telegramId (для тестирования)
+// Роут для ручного входа (для тестирования)
 app.post('/auth/login', (req, res) => {
   try {
     const { telegramId } = req.body;
-
+    
     if (!telegramId) {
-      return res.status(400).json({ success: false, message: 'Отсутствует telegramId' });
+      return res.status(400).json({ message: 'Отсутствует ID пользователя Telegram' });
     }
-
-    // Ищем пользователя в базе
-    const user = usersDB.find(u => u.telegramId === telegramId);
-
+    
+    // Ищем пользователя в нашей "базе"
+    const user = users[telegramId];
+    
     if (!user) {
-      // Создаем тестового пользователя
-      const newUser = {
-        id: usersDB.length + 1,
-        telegramId,
-        firstName: 'Тестовый',
-        lastName: 'Пользователь',
-        username: 'test_user',
-        isAdmin: false,
-        hasActiveSubscription: true,
-        subscriptionEndDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
-        progress: {
-          completedLessons: [],
-          completedModules: []
-        }
-      };
-
-      usersDB.push(newUser);
-      
-      // Генерируем токен
-      const token = crypto.randomBytes(64).toString('hex');
-
-      return res.status(200).json({
-        success: true,
-        token,
-        user: newUser
-      });
+      return res.status(404).json({ message: 'Пользователь не найден' });
     }
-
-    // Генерируем токен для существующего пользователя
-    const token = crypto.randomBytes(64).toString('hex');
-
-    return res.status(200).json({
-      success: true,
+    
+    // Генерируем простой токен
+    const token = crypto.randomBytes(32).toString('hex');
+    
+    return res.json({
+      user,
       token,
-      user
+      expires: Date.now() + 86400000 // Токен действителен 24 часа
     });
   } catch (error) {
     console.error('Ошибка входа:', error);
-    return res.status(500).json({ success: false, message: 'Внутренняя ошибка сервера' });
+    return res.status(500).json({ message: 'Внутренняя ошибка сервера' });
   }
 });
 
 // Запуск сервера
 app.listen(PORT, () => {
-  console.log(`Сервер запущен на порту ${PORT}`);
+  console.log(`Сервер аутентификации запущен на порту ${PORT}`);
+  console.log(`URL: http://localhost:${PORT}`);
 }); 

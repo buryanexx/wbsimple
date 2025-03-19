@@ -1,8 +1,9 @@
 import React, { useEffect, useState } from 'react';
-import { HashRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { HashRouter as Router, Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth, AuthProvider } from './hooks/useAuth.tsx';
 import BottomNavigation from './components/BottomNavigation';
 import { config } from './config.ts';
+import { useWebApp } from '@vkruglikov/react-telegram-web-app';
 
 // Страницы
 import HomePage from './pages/HomePage';
@@ -25,7 +26,7 @@ declare global {
     tgInitComplete?: boolean;
     reactAppMounted?: boolean;
     pendingNavigationPath?: string;
-    safeTelegramNavigation?: (path: string) => void;
+    safeTelegramNavigation?: (path: string) => boolean;
     tgWebAppLogs?: any[];
     tgWebAppErrors?: any[];
   }
@@ -48,6 +49,9 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
 
 function AppContent() {
   const { isAuthenticated, loading, user } = useAuth();
+  const webApp = useWebApp();
+  const navigate = useNavigate();
+  const location = useLocation();
   const [appReady, setAppReady] = useState(false);
 
   useEffect(() => {
@@ -65,10 +69,27 @@ function AppContent() {
     // Применяем тему Telegram к приложению
     document.documentElement.classList.add('telegram-theme');
     
+    // Настраиваем BackButton для хеш-роутинга
+    if (webApp?.BackButton) {
+      const path = location.pathname;
+      
+      if (path !== '/') {
+        webApp.BackButton.show();
+        
+        // Обработчик кнопки "Назад"
+        webApp.BackButton.onClick(() => {
+          navigate('/');
+          return true; // Чтобы соответствовать типу (path: string) => boolean
+        });
+      } else {
+        webApp.BackButton.hide();
+      }
+    }
+    
     return () => {
       document.documentElement.classList.remove('telegram-theme');
     };
-  }, []);
+  }, [location.pathname, webApp, navigate]);
 
   // Показываем загрузку, пока не инициализирован Telegram WebApp
   if (!appReady) {
