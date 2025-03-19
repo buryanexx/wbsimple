@@ -12,20 +12,68 @@
     <title>WB Simple - Образовательная платформа</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <script type="text/javascript">
-      // Первичная проверка хеша - если есть хеш, но он пустой, перенаправляем на корень
-      if (window.location.hash === '#' || window.location.hash === '#/') {
-        console.log('Обнаружен пустой хеш, перенаправляем на главную');
-        window.location.replace('./');
-      }
-      
-      // Инициализация Telegram WebApp с улучшенной навигацией
       (function() {
-        // Глобальные переменные для хранения логов и состояния
+        // Переменные для сохранения текущего состояния
         window.tgWebAppLogs = [];
         window.tgWebAppErrors = [];
         window.tgInitData = {};
         window.tgInitParams = {};
+        window.tgInitComplete = false;
+        window.reactAppLoaded = false;
+        window.locationParsed = false;
         
+        // Логирование отладочной информации
+        function logMessage(msg) {
+          console.log('[WebApp]', msg);
+          if (window.tgWebAppLogs) {
+            window.tgWebAppLogs.push({
+              time: new Date().toISOString(),
+              message: msg
+            });
+          }
+        }
+        
+        // Функция для обработки текущего URL при загрузке
+        function handleInitialLocation() {
+          try {
+            logMessage('Обработка начального URL');
+            
+            // 1. Если пустой хеш, но есть обычный путь (предотвращает 404)
+            if (window.location.pathname !== '/' && window.location.pathname !== '') {
+              const newPath = '/#' + window.location.pathname;
+              logMessage('Найден обычный путь, преобразуем в хеш-путь: ' + newPath);
+              window.location.replace(newPath);
+              return true;
+            }
+            
+            // 2. Исправление пустых хешей
+            if (window.location.hash === '#' || window.location.hash === '#/') {
+              logMessage('Найден пустой хеш, перенаправляем на корневой URL');
+              window.location.replace('./');
+              return true;
+            }
+            
+            // 3. Если есть хеш-путь кроме #/, оставляем его как есть
+            if (window.location.hash && window.location.hash !== '#/') {
+              logMessage('Хеш-путь выглядит корректным: ' + window.location.hash);
+              return false;
+            }
+            
+            // 4. Если нет никакого пути, просто переходим на главную
+            logMessage('Нет конкретного пути, загружаем стандартно');
+            return false;
+          } catch (error) {
+            console.error('Ошибка при обработке начального URL:', error);
+            return false;
+          }
+        }
+        
+        // Запускаем проверку при загрузке страницы
+        window.locationParsed = handleInitialLocation();
+      })();
+      
+      // Инициализация Telegram WebApp
+      (function() {
         function logTelegram(message) {
           if (window.tgWebAppLogs) {
             window.tgWebAppLogs.push({
@@ -317,12 +365,10 @@
         console.log('Изменение хеша:', window.location.hash);
         
         // Если хеш пустой, а загрузка уже завершена - перенаправляем на главную
-        if (window.location.hash === '#' || window.location.hash === '#/') {
-          console.log('Пустой хеш обнаружен, перезагружаем страницу');
-          // Добавляем проверку, чтобы избежать бесконечного редиректа 
-          if (window.reactAppMounted) {
-            window.location.reload();
-          }
+        if ((window.location.hash === '#' || window.location.hash === '#/') && window.reactAppLoaded) {
+          console.log('Пустой хеш обнаружен после загрузки, исправляем...');
+          // Заменяем текущий URL на корневой путь без хеша
+          history.replaceState(null, document.title, './');
         }
       });
       
@@ -333,12 +379,10 @@
       
       // Контроль загрузки страницы
       window.addEventListener('load', function() {
-        console.log('Страница полностью загружена');
-        
-        // Проверяем хеш при загрузке
-        if (!window.location.hash || window.location.hash === '#' || window.location.hash === '#/') {
-          console.log('Пустой хеш при загрузке страницы, устанавливаем главную');
-        }
+        console.log('Страница полностью загружена:', 
+          'hash =', window.location.hash, 
+          'pathname =', window.location.pathname);
+        window.reactAppLoaded = true;
       });
     </script>
   </body>

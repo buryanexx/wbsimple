@@ -45,7 +45,8 @@ export default defineConfig(({ mode }) => {
       minify: 'terser', // Используем terser для лучшей минификации
       terserOptions: {
         compress: {
-          drop_console: true, // Удаляем console.log в продакшене
+          drop_console: false, // Сохраняем консоль для отладки в продакшене
+          drop_debugger: false // Сохраняем отладочные точки в продакшене
         }
       },
       rollupOptions: {
@@ -55,7 +56,10 @@ export default defineConfig(({ mode }) => {
             telegram: ['@vkruglikov/react-telegram-web-app']
           }
         }
-      }
+      },
+      // Копируем 404.html для Vercel
+      assetsDir: 'assets',
+      emptyOutDir: true
     }
   }
 })
