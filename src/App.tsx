@@ -1,5 +1,5 @@
-import React, { useEffect } from 'react';
-import { HashRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import React, { useEffect, useState } from 'react';
+import { HashRouter as Router, Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth, AuthProvider } from './hooks/useAuth.tsx';
 import BottomNavigation from './components/BottomNavigation';
 
@@ -18,6 +18,20 @@ import SuccessStoriesPage from './pages/SuccessStoriesPage';
 import TimelinePage from './pages/TimelinePage';
 import MasterClassPage from './pages/MasterClassPage';
 
+// Расширяем глобальный тип Window для Telegram WebApp
+declare global {
+  interface Window {
+    tgInitComplete?: boolean;
+  }
+  
+  // Определяем интерфейс для CustomEvent с detail
+  interface TelegramHashChangeEvent extends CustomEvent {
+    detail: {
+      hash: string;
+    };
+  }
+}
+
 // Защищенный маршрут
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   const { isAuthenticated, loading } = useAuth();
@@ -33,35 +47,72 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   return isAuthenticated ? <>{children}</> : <Navigate to="/" replace />;
 };
 
-function AppContent() {
-  const { isAuthenticated, loading, user } = useAuth();
-
+// Компонент для обработки внешних событий навигации
+const TelegramRouteHandler = () => {
+  const navigate = useNavigate();
+  const location = useLocation();
+  
+  // Слушаем событие изменения хеша от Telegram
   useEffect(() => {
-    // Применяем тему Telegram к приложению
-    document.documentElement.classList.add('telegram-theme');
-    
-    // Предотвращаем перезагрузку по ссылкам
-    const handleLinkClick = (e: MouseEvent) => {
-      const target = e.target as HTMLElement;
-      const link = target.closest('a');
-      
-      if (link && link.getAttribute('href')?.startsWith('/')) {
-        e.preventDefault();
-        const path = link.getAttribute('href') || '/';
-        window.location.hash = path;
+    const handleTelegramHashChange = (event: TelegramHashChangeEvent) => {
+      const hash = event.detail.hash.replace('#', '');
+      if (hash && hash !== location.pathname) {
+        navigate(hash, { replace: true });
       }
     };
     
-    document.addEventListener('click', handleLinkClick);
+    window.addEventListener('telegram-hash-change', 
+      handleTelegramHashChange as EventListener);
+    
+    return () => {
+      window.removeEventListener('telegram-hash-change', 
+        handleTelegramHashChange as EventListener);
+    };
+  }, [navigate, location.pathname]);
+  
+  // Просто прокидываем null, компонент только для эффектов
+  return null;
+};
+
+function AppContent() {
+  const { isAuthenticated, loading, user } = useAuth();
+  const [appReady, setAppReady] = useState(false);
+
+  useEffect(() => {
+    // Дожидаемся инициализации Telegram WebApp
+    const checkTelegramReady = () => {
+      if (window.tgInitComplete) {
+        setAppReady(true);
+      } else {
+        setTimeout(checkTelegramReady, 50);
+      }
+    };
+    
+    checkTelegramReady();
+    
+    // Применяем тему Telegram к приложению
+    document.documentElement.classList.add('telegram-theme');
     
     return () => {
       document.documentElement.classList.remove('telegram-theme');
-      document.removeEventListener('click', handleLinkClick);
     };
   }, []);
 
+  // Показываем загрузку, пока не инициализирован Telegram WebApp
+  if (!appReady) {
+    return (
+      <div className="flex items-center justify-center h-screen">
+        <div className="w-16 h-16 border-4 border-[#6A45E8] border-t-transparent rounded-full animate-spin"></div>
+        <p className="ml-4 text-gray-600">Загрузка...</p>
+      </div>
+    );
+  }
+
   return (
-    <div className="app min-h-screen bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white">
+    <div className="app min-h-screen bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white telegram-page-transition">
+      {/* Обработчик маршрутов Telegram */}
+      <TelegramRouteHandler />
+      
       <Routes>
         {/* Публичные маршруты */}
         <Route path="/" element={<HomePage />} />

@@ -25,22 +25,98 @@
       }(window.location))
 
       // Инициализация Telegram WebApp
-      const tgApp = window.Telegram?.WebApp;
-      if (tgApp) {
-        tgApp.ready();
-        tgApp.expand();
-      }
-
-      // Переопределяем window.open для открытия ссылок внутри приложения
-      const originalWindowOpen = window.open;
-      window.open = function(url, target, features) {
-        if (url && tgApp && url.startsWith('http')) {
-          tgApp.openLink(url);
-          return null;
+      window.addEventListener('DOMContentLoaded', function() {
+        const tgApp = window.Telegram?.WebApp;
+        
+        if (tgApp) {
+          tgApp.ready();
+          tgApp.expand();
+          
+          // Отключаем стандартное поведение ссылок и форм
+          document.addEventListener('click', function(e) {
+            const link = e.target.closest('a');
+            if (link && !e.defaultPrevented) {
+              const href = link.getAttribute('href');
+              
+              if (href && href.startsWith('#')) {
+                // Это уже хеш-ссылка, разрешаем стандартное поведение
+                return;
+              }
+              
+              if (href && href.startsWith('/')) {
+                e.preventDefault();
+                // Добавляем хеш вместо перехода по ссылке
+                window.location.hash = href;
+              }
+              
+              if (href && href.startsWith('http')) {
+                e.preventDefault();
+                tgApp.openLink(href);
+              }
+            }
+          });
+          
+          // Переопределяем window.open для открытия ссылок внутри приложения
+          const originalWindowOpen = window.open;
+          window.open = function(url, target, features) {
+            if (url && tgApp) {
+              if (url.startsWith('http')) {
+                tgApp.openLink(url);
+                return null;
+              } else if (url.startsWith('/')) {
+                window.location.hash = url;
+                return null;
+              }
+            }
+            return originalWindowOpen.call(window, url, target, features);
+          };
+          
+          // Сообщаем основному приложению, что инициализация завершена
+          window.tgInitComplete = true;
+          
+          // Добавляем CSS-класс для стилизации в стиле Telegram
+          document.documentElement.classList.add('telegram-app');
         }
-        return originalWindowOpen.call(window, url, target, features);
-      };
+      });
+      
+      // Обрабатываем навигацию по хешу
+      window.addEventListener('hashchange', function() {
+        // Отправляем событие в React-приложение
+        window.dispatchEvent(new CustomEvent('telegram-hash-change', {
+          detail: { hash: window.location.hash }
+        }));
+      });
     </script>
+    <style>
+      /* Основные стили для Telegram WebApp */
+      body {
+        margin: 0;
+        padding: 0;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen,
+          Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+        background-color: var(--tg-theme-bg-color, #ffffff);
+        color: var(--tg-theme-text-color, #000000);
+        user-select: none;
+        -webkit-tap-highlight-color: transparent;
+      }
+      
+      .telegram-app button {
+        -webkit-tap-highlight-color: transparent;
+        cursor: pointer;
+      }
+      
+      /* Добавляем стили для анимации перехода страниц */
+      .telegram-page-transition {
+        animation: telegram-fade-in 0.2s ease-in-out;
+      }
+      
+      @keyframes telegram-fade-in {
+        from { opacity: 0.7; transform: translateY(10px); }
+        to { opacity: 1; transform: translateY(0); }
+      }
+    </style>
   </head>
   <body>
     <div id="root"></div>
