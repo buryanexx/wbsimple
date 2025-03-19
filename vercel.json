@@ -42,9 +42,5 @@
     "VITE_USE_HASH_ROUTER": "true"
   },
   "cleanUrls": false,
-  "trailingSlash": false,
-  "routes": [
-    { "handle": "filesystem" },
-    { "src": "/[^.]+", "dest": "/", "status": 200 }
-  ]
+  "trailingSlash": false
 }
