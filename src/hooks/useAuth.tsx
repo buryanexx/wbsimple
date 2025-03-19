@@ -168,9 +168,30 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           // Если есть сохраненные данные, восстанавливаем сессию
           const parsedUser = JSON.parse(savedUser);
           setUser({ ...parsedUser, token: savedToken });
+          
+          // Для Telegram Web App в development режиме
+          if (!webApp && process.env.NODE_ENV === 'development') {
+            console.log('Разработка без Telegram Web App: аутентификация с локальным хранилищем');
+          }
         } else if (savedInitData) {
           // Если есть initData, пытаемся войти
           await login(savedInitData);
+        } else if (process.env.NODE_ENV === 'development') {
+          // В режиме разработки без initData создаем тестового пользователя
+          setUser({
+            id: 1,
+            telegramId: 123456789,
+            firstName: 'Тестовый',
+            lastName: 'Пользователь',
+            isAdmin: false,
+            hasActiveSubscription: true,
+            token: 'test-token',
+            progress: {
+              completedLessons: [],
+              completedModules: []
+            }
+          });
+          console.log('Разработка: включен тестовый пользователь для навигации');
         }
       } catch (err) {
         console.error('Ошибка при инициализации аутентификации:', err);

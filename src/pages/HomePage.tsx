@@ -125,7 +125,7 @@ const HomePage = () => {
             onClick={() => navigate('/calculator')}
           >
             {/* Метка "Бесплатно" */}
-            <div className="absolute -right-8 top-3 bg-green-500 text-white text-xs px-10 py-1 transform rotate-45">
+            <div className="absolute -right-12 top-6 w-36 bg-green-500 text-white text-xs text-center font-medium py-1 transform rotate-45">
               Бесплатно
             </div>
             <div className="flex items-center mb-2">
@@ -146,7 +146,7 @@ const HomePage = () => {
             onClick={() => navigate('/wb-calculator')}
           >
             {/* Метка "Бесплатно" */}
-            <div className="absolute -right-8 top-3 bg-green-500 text-white text-xs px-10 py-1 transform rotate-45">
+            <div className="absolute -right-12 top-6 w-36 bg-green-500 text-white text-xs text-center font-medium py-1 transform rotate-45">
               Бесплатно
             </div>
             <div className="flex items-center mb-2">

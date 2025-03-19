@@ -1,6 +1,6 @@
 import React, { useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import { useAuth } from './hooks/useAuth.tsx';
+import { useAuth, AuthProvider } from './hooks/useAuth.tsx';
 import BottomNavigation from './components/BottomNavigation';
 
 // Страницы
@@ -25,7 +25,7 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-screen">
-        <div className="w-16 h-16 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
+        <div className="w-16 h-16 border-4 border-[#6A45E8] border-t-transparent rounded-full animate-spin"></div>
       </div>
     );
   }
@@ -33,7 +33,7 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   return isAuthenticated ? <>{children}</> : <Navigate to="/" replace />;
 };
 
-function App() {
+function AppContent() {
   const { isAuthenticated, loading, user } = useAuth();
 
   useEffect(() => {
@@ -46,59 +46,63 @@ function App() {
   }, []);
 
   return (
-    <Router>
-      <div className="app min-h-screen bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white">
-        <Routes>
-          {/* Публичные маршруты */}
-          <Route path="/" element={<HomePage />} />
-          <Route path="/onboarding" element={<OnboardingPage />} />
-          <Route path="/subscription" element={<SubscriptionPage />} />
-          <Route path="/calculator" element={<CalculatorPage />} />
-          <Route path="/wb-calculator" element={<WildberriesCalculatorPage />} />
-          <Route path="/success-stories" element={<SuccessStoriesPage />} />
-          <Route path="/master-class" element={<MasterClassPage />} />
-          
-          {/* Защищенные маршруты */}
-          <Route path="/modules" element={
-            <ProtectedRoute>
-              <ModulesPage />
-            </ProtectedRoute>
-          } />
-          <Route path="/lesson/:moduleId/:lessonId" element={
-            <ProtectedRoute>
-              <LessonPage />
-            </ProtectedRoute>
-          } />
-          <Route path="/templates" element={
-            <ProtectedRoute>
-              <TemplatesPage />
-            </ProtectedRoute>
-          } />
-          <Route path="/profile" element={
-            <ProtectedRoute>
-              <ProfilePage />
-            </ProtectedRoute>
-          } />
-          <Route path="/channel" element={
-            <ProtectedRoute>
-              <ChannelPage />
-            </ProtectedRoute>
-          } />
-          <Route path="/timeline" element={
-            <ProtectedRoute>
-              <TimelinePage />
-            </ProtectedRoute>
-          } />
-          
-          {/* Маршрут для 404 */}
-          <Route path="*" element={<Navigate to="/" replace />} />
-        </Routes>
+    <div className="app min-h-screen bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white">
+      <Routes>
+        {/* Публичные маршруты */}
+        <Route path="/" element={<HomePage />} />
+        <Route path="/onboarding" element={<OnboardingPage />} />
+        <Route path="/subscription" element={<SubscriptionPage />} />
+        <Route path="/calculator" element={<CalculatorPage />} />
+        <Route path="/wb-calculator" element={<WildberriesCalculatorPage />} />
+        <Route path="/success-stories" element={<SuccessStoriesPage />} />
+        <Route path="/master-class" element={<MasterClassPage />} />
+        <Route path="/timeline" element={<TimelinePage />} />
         
-        {/* Нижняя навигация - отображаем всегда, кроме экрана загрузки */}
-        {!loading && (
-          <BottomNavigation />
-        )}
-      </div>
+        {/* Защищенные маршруты */}
+        <Route path="/modules" element={
+          <ProtectedRoute>
+            <ModulesPage />
+          </ProtectedRoute>
+        } />
+        <Route path="/lesson/:moduleId/:lessonId" element={
+          <ProtectedRoute>
+            <LessonPage />
+          </ProtectedRoute>
+        } />
+        <Route path="/templates" element={
+          <ProtectedRoute>
+            <TemplatesPage />
+          </ProtectedRoute>
+        } />
+        <Route path="/profile" element={
+          <ProtectedRoute>
+            <ProfilePage />
+          </ProtectedRoute>
+        } />
+        <Route path="/channel" element={
+          <ProtectedRoute>
+            <ChannelPage />
+          </ProtectedRoute>
+        } />
+        
+        {/* Маршрут для 404 */}
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
+      
+      {/* Нижняя навигация - отображаем всегда, кроме экрана загрузки */}
+      {!loading && (
+        <BottomNavigation />
+      )}
+    </div>
+  );
+}
+
+function App() {
+  return (
+    <Router>
+      <AuthProvider>
+        <AppContent />
+      </AuthProvider>
     </Router>
   );
 }
