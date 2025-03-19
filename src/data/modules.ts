@@ -25,6 +25,7 @@ export interface Module {
   icon: string;
   color: string;
   isFree: boolean;
+  isCompleted?: boolean;
   lessons: Lesson[];
 }
 

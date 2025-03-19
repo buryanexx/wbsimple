@@ -6,22 +6,82 @@ import Button from '../components/Button';
 import UserStatus from '../components/UserStatus';
 import { useSubscription } from '../hooks/useSubscription';
 import { modulesData } from '../data/modules';
+import { useAuth } from '../hooks/useAuth';
 
 const ModulesPage = () => {
   const navigate = useNavigate();
   const webApp = useWebApp();
   const { hasAccess, subscription } = useSubscription();
+  const { user } = useAuth();
   const [isLoading, setIsLoading] = useState(true);
   const [visibleModules, setVisibleModules] = useState<number[]>([]);
+  const [userModules, setUserModules] = useState(modulesData);
+  
+  // API URLs
+  const API_BASE_URL = process.env.REACT_APP_API_URL || 'https://api.wbsimple.ru/api';
 
   useEffect(() => {
-    // Имитация загрузки данных
-    const timer = setTimeout(() => {
-      setIsLoading(false);
-    }, 800);
+    // Загрузка данных пользователя и его прогресса
+    const fetchUserProgress = async () => {
+      try {
+        setIsLoading(true);
+        
+        // В реальном проекте здесь будет запрос к API для получения прогресса пользователя
+        // const response = await fetch(`${API_BASE_URL}/users/progress`, {
+        //   method: 'GET',
+        //   headers: {
+        //     'Authorization': `Bearer ${user?.token}`,
+        //     'Content-Type': 'application/json'
+        //   }
+        // });
+        
+        // if (response.ok) {
+        //   const progressData = await response.json();
+        //   // Обработка прогресса и обновление модулей
+        // }
+        
+        // Обрабатываем данные о прогрессе из профиля пользователя
+        if (user && user.progress) {
+          const completedLessons = user.progress.completedLessons || [];
+          const completedModules = user.progress.completedModules || [];
+          
+          // Обновляем данные о модулях с реальным прогрессом пользователя
+          const updatedModules = modulesData.map(module => {
+            // Считаем количество завершенных уроков в этом модуле
+            const moduleLessonIds = module.lessons.map(lesson => lesson.id);
+            const completedLessonsInModule = moduleLessonIds.filter(id => 
+              completedLessons.includes(id)
+            ).length;
+            
+            // Вычисляем процент прогресса
+            const progress = module.lessonsCount > 0 
+              ? Math.round((completedLessonsInModule / module.lessonsCount) * 100)
+              : 0;
+            
+            // Обновляем прогресс модуля
+            return {
+              ...module,
+              progress,
+              isCompleted: completedModules.includes(module.id)
+            };
+          });
+          
+          setUserModules(updatedModules);
+          console.log('Прогресс пользователя обновлен:', updatedModules);
+        }
+        
+        // Имитация задержки загрузки для демонстрации UI
+        setTimeout(() => {
+          setIsLoading(false);
+        }, 600);
+      } catch (error) {
+        console.error('Ошибка при загрузке прогресса пользователя:', error);
+        setIsLoading(false);
+      }
+    };
 
-    return () => clearTimeout(timer);
-  }, []);
+    fetchUserProgress();
+  }, [user]);
 
   useEffect(() => {
     if (!isLoading) {
@@ -73,8 +133,8 @@ const ModulesPage = () => {
   }
 
   // Разделяем модули на бесплатные и премиум
-  const freeModules = modulesData.filter(module => module.isFree);
-  const premiumModules = modulesData.filter(module => !module.isFree);
+  const freeModules = userModules.filter(module => module.isFree);
+  const premiumModules = userModules.filter(module => !module.isFree);
 
   return (
     <div className="p-4 pb-44">
@@ -114,7 +174,7 @@ const ModulesPage = () => {
             >
               <Card 
                 variant="default"
-                className="hover:shadow-md border-l-4 border-primary"
+                className={`hover:shadow-md border-l-4 ${module.isCompleted ? 'border-green-500' : 'border-primary'}`}
                 onClick={() => handleModuleClick(module.id)}
               >
                 <div className="flex items-start">
@@ -138,7 +198,9 @@ const ModulesPage = () => {
                     </div>
                     <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-1.5 mt-2 overflow-hidden">
                       <div 
-                        className={`h-1.5 rounded-full transition-all duration-1000 ${module.color}`}
+                        className={`h-1.5 rounded-full transition-all duration-1000 ${
+                          module.isCompleted ? 'bg-green-500' : module.color
+                        }`}
                         style={{ width: `${module.progress}%` }}
                       ></div>
                     </div>
@@ -175,7 +237,9 @@ const ModulesPage = () => {
               <Card 
                 variant={subscription.isActive ? "default" : "outline"}
                 className={`hover:shadow-sm relative overflow-hidden ${
-                  subscription.isActive ? "border-l-4 border-accent" : ""
+                  subscription.isActive 
+                    ? `border-l-4 ${module.isCompleted ? 'border-green-500' : 'border-accent'}`
+                    : ""
                 }`}
                 onClick={() => handleModuleClick(module.id)}
               >
@@ -210,11 +274,21 @@ const ModulesPage = () => {
                         </Button>
                       )}
                       {subscription.isActive && (
-                        <span className="text-green-600 dark:text-green-400 font-medium">
-                          Доступно
-                        </span>
+                        <>
+                          <span>{module.progress}% завершено</span>
+                        </>
                       )}
                     </div>
+                    {subscription.isActive && (
+                      <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-1.5 mt-2 overflow-hidden">
+                        <div 
+                          className={`h-1.5 rounded-full transition-all duration-1000 ${
+                            module.isCompleted ? 'bg-green-500' : module.color
+                          }`}
+                          style={{ width: `${module.progress}%` }}
+                        ></div>
+                      </div>
+                    )}
                   </div>
                 </div>
               </Card>

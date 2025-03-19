@@ -50,23 +50,61 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   // Хелперы для работы с Telegram
   const telegramHelpers = {
     isRunningInTelegram: () => {
-      return !!window.Telegram && !!window.Telegram.WebApp;
+      // Проверяем наличие объекта Telegram и его свойств
+      const isTelegramAvailable = typeof window !== 'undefined' && 
+        window.Telegram && 
+        window.Telegram.WebApp;
+      
+      if (isTelegramAvailable) {
+        console.log('Telegram WebApp доступен:', window.Telegram.WebApp);
+        return true;
+      }
+      
+      // Дополнительная проверка на параметры URL
+      const url = window.location.href;
+      if (url.includes('tgWebAppData=') || url.includes('tgWebAppVersion=')) {
+        console.log('Обнаружены параметры Telegram WebApp в URL');
+        return true;
+      }
+      
+      console.log('Telegram WebApp не обнаружен');
+      return false;
     },
     
     getTelegramUser: () => {
       if (!telegramHelpers.isRunningInTelegram()) return null;
-      return window.Telegram.WebApp.initDataUnsafe?.user || null;
+      
+      try {
+        // Пытаемся получить данные пользователя
+        const webAppUser = window.Telegram?.WebApp?.initDataUnsafe?.user;
+        console.log('Данные пользователя Telegram:', webAppUser);
+        return webAppUser || null;
+      } catch (error) {
+        console.error('Ошибка при получении данных пользователя Telegram:', error);
+        return null;
+      }
     },
     
     getInitData: () => {
       if (!telegramHelpers.isRunningInTelegram()) return '';
-      return window.Telegram.WebApp.initData || '';
+      
+      try {
+        return window.Telegram?.WebApp?.initData || '';
+      } catch (error) {
+        console.error('Ошибка при получении initData:', error);
+        return '';
+      }
     },
     
     showAlert: (message: string) => {
-      if (telegramHelpers.isRunningInTelegram() && window.Telegram?.WebApp?.showAlert) {
-        window.Telegram.WebApp.showAlert(message);
-      } else {
+      try {
+        if (telegramHelpers.isRunningInTelegram() && window.Telegram?.WebApp?.showAlert) {
+          window.Telegram.WebApp.showAlert(message);
+        } else {
+          alert(message);
+        }
+      } catch (error) {
+        console.error('Ошибка при показе уведомления:', error);
         alert(message);
       }
     }
@@ -76,35 +114,31 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   useEffect(() => {
     const checkAuth = async () => {
       try {
+        console.log('Начинаем проверку аутентификации');
+        // Проверка, запущено ли приложение в Telegram
+        const isInTelegram = telegramHelpers.isRunningInTelegram();
+        console.log('Приложение запущено в Telegram:', isInTelegram);
+        
         // Проверяем сохраненный токен и пользователя
         const savedToken = localStorage.getItem(AUTH_CONFIG.storageTokenKey);
         const savedUser = localStorage.getItem(AUTH_CONFIG.storageUserKey);
+        console.log('Сохраненные данные:', { token: !!savedToken, user: !!savedUser });
         
         if (savedToken && savedUser) {
           try {
             // В реальном проекте здесь будет запрос к API для проверки валидности токена
-            // const response = await fetch(`${AUTH_CONFIG.apiUrl}/auth/verify-token`, {
-            //   method: 'GET',
-            //   headers: {
-            //     'Authorization': `Bearer ${savedToken}`
-            //   }
-            // });
-            
-            // if (response.ok) {
-              // Если токен валидный, используем сохраненного пользователя
-              setUser(JSON.parse(savedUser));
-              setError(null);
-            // } else {
-            //   // Если токен невалидный, выполняем автоматическую авторизацию
-            //   await tryTelegramAuth();
-            // }
+            console.log('Используем сохраненного пользователя');
+            setUser(JSON.parse(savedUser));
+            setError(null);
           } catch (error) {
             console.error('Ошибка при проверке токена:', error);
             // Если произошла ошибка, пробуем выполнить автоматическую авторизацию
+            console.log('Пытаемся выполнить автоматическую авторизацию');
             await tryTelegramAuth();
           }
         } else {
           // Если нет сохраненных данных, пробуем выполнить автоматическую авторизацию
+          console.log('Нет сохраненных данных, пытаемся выполнить автоматическую авторизацию');
           await tryTelegramAuth();
         }
       } catch (error) {
@@ -120,28 +154,61 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   
   // Попытка автоматической авторизации через Telegram
   const tryTelegramAuth = async () => {
+    console.log('Пытаемся выполнить автоматическую авторизацию через Telegram');
+    
+    // Принудительное создание пользователя для отладки
+    const createDemoUser = () => {
+      const demoUser: User = {
+        id: Math.floor(Math.random() * 1000000),
+        telegramId: Math.floor(Math.random() * 1000000),
+        firstName: 'Демо',
+        lastName: 'Пользователь',
+        username: 'demo_user',
+        isAdmin: false,
+        hasActiveSubscription: true, // Для тестирования включаем подписку
+        subscriptionEndDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(), // 30 дней
+        token: 'demo_token_' + Math.random().toString(36).substring(7),
+        progress: {
+          completedLessons: [1, 2],
+          completedModules: []
+        }
+      };
+      
+      // Сохраняем данные пользователя и токен
+      localStorage.setItem(AUTH_CONFIG.storageUserKey, JSON.stringify(demoUser));
+      localStorage.setItem(AUTH_CONFIG.storageTokenKey, demoUser.token);
+      
+      // Устанавливаем пользователя в состояние
+      setUser(demoUser);
+      setError(null);
+      console.log('Создан демо-пользователь для тестирования');
+      return demoUser;
+    };
+    
     if (!telegramHelpers.isRunningInTelegram()) {
-      console.log('Приложение не запущено в Telegram WebApp');
+      console.log('Приложение не запущено в Telegram WebApp, создаем демо-пользователя');
+      createDemoUser();
       setLoading(false);
       return;
     }
     
     const tgUser = telegramHelpers.getTelegramUser();
     if (!tgUser) {
-      console.log('Нет данных пользователя в Telegram WebApp');
+      console.log('Нет данных пользователя в Telegram WebApp, создаем демо-пользователя');
+      createDemoUser();
       setLoading(false);
       return;
     }
     
     try {
-      // Получаем initData для валидации на сервере
+      console.log('Данные пользователя из Telegram получены:', tgUser);
+      
+      // Получаем initData для валидации на сервере (в реальном приложении)
       const initData = telegramHelpers.getInitData();
+      console.log('initData получена:', !!initData);
       
       if (!initData) {
-        console.error('Ошибка: initData недоступна');
-        setError('Ошибка получения данных от Telegram');
-        setLoading(false);
-        return;
+        console.warn('initData недоступна, но продолжаем авторизацию с данными пользователя');
       }
       
       // В реальном проекте здесь будет запрос к API для аутентификации
@@ -156,32 +223,33 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       // if (response.ok) {
       //   const data = await response.json();
         
-        // В демо-режиме создаем пользователя на основе данных из WebApp
-        const authenticatedUser: User = {
-          id: tgUser.id,
-          telegramId: tgUser.id,
-          firstName: tgUser.first_name,
-          lastName: tgUser.last_name,
-          username: tgUser.username,
-          photoUrl: tgUser.photo_url,
-          isAdmin: false,
-          hasActiveSubscription: false, // По умолчанию подписка неактивна
-          token: 'demo_token', // В реальном проекте будет получен с сервера
-          progress: {
-            completedLessons: [],
-            completedModules: []
-          }
-        };
+      // В демо-режиме создаем пользователя на основе данных из WebApp
+      const authenticatedUser: User = {
+        id: tgUser.id,
+        telegramId: tgUser.id,
+        firstName: tgUser.first_name,
+        lastName: tgUser.last_name,
+        username: tgUser.username,
+        photoUrl: tgUser.photo_url,
+        isAdmin: false,
+        hasActiveSubscription: true, // Для демо включаем подписку
+        subscriptionEndDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(), // 30 дней
+        token: 'demo_token_' + Math.random().toString(36).substring(7),
+        progress: {
+          completedLessons: [1, 2, 3, 4], // Добавляем прогресс для демонстрации
+          completedModules: [1]
+        }
+      };
         
-        // Сохраняем данные пользователя и токен
-        localStorage.setItem(AUTH_CONFIG.storageUserKey, JSON.stringify(authenticatedUser));
-        localStorage.setItem(AUTH_CONFIG.storageTokenKey, authenticatedUser.token);
-        
-        // Устанавливаем пользователя в состояние
-        setUser(authenticatedUser);
-        setError(null);
-        
-        console.log('Пользователь успешно аутентифицирован через Telegram');
+      // Сохраняем данные пользователя и токен
+      localStorage.setItem(AUTH_CONFIG.storageUserKey, JSON.stringify(authenticatedUser));
+      localStorage.setItem(AUTH_CONFIG.storageTokenKey, authenticatedUser.token);
+      
+      // Устанавливаем пользователя в состояние
+      setUser(authenticatedUser);
+      setError(null);
+      
+      console.log('Пользователь успешно аутентифицирован через Telegram:', authenticatedUser);
       // } else {
       //   const errorData = await response.json();
       //   console.error('Ошибка авторизации через Telegram:', errorData);
@@ -190,6 +258,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     } catch (error) {
       console.error('Ошибка при авторизации через Telegram:', error);
       setError('Ошибка при авторизации через Telegram');
+      // В случае ошибки создаем демо-пользователя
+      createDemoUser();
     } finally {
       setLoading(false);
     }
