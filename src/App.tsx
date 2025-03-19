@@ -54,11 +54,25 @@ function AppContent() {
   const location = useLocation();
   const [appReady, setAppReady] = useState(false);
 
+  // Эффект для инициализации WebApp и настройки маршрутизации
   useEffect(() => {
+    // Логирование текущего пути для отладки
+    console.log('Текущий путь:', location.pathname);
+    console.log('Текущий хеш:', window.location.hash);
+    
     // Дожидаемся инициализации Telegram WebApp
     const checkTelegramReady = () => {
       if (window.tgInitComplete) {
         setAppReady(true);
+        
+        // Разовая проверка при загрузке страницы
+        // Если хеш пустой или только '/', обеспечим загрузку главной
+        const hash = window.location.hash;
+        if (!hash || hash === '#' || hash === '#/') {
+          console.log('Пустой хеш при инициализации, перенаправляем на главную');
+          // Направляем на корень через React Router
+          navigate('/');
+        }
       } else {
         setTimeout(checkTelegramReady, 50);
       }
@@ -89,7 +103,7 @@ function AppContent() {
     return () => {
       document.documentElement.classList.remove('telegram-theme');
     };
-  }, [location.pathname, webApp, navigate]);
+  }, [location.pathname, webApp, navigate, location]);
 
   // Показываем загрузку, пока не инициализирован Telegram WebApp
   if (!appReady) {

@@ -93,6 +93,8 @@ const BottomNavigation = () => {
       });
     }
     
+    console.log('Переход на путь:', path);
+    
     // Показываем индикатор загрузки в Telegram
     if (webApp?.MainButton) {
       webApp.MainButton.showProgress();
@@ -101,8 +103,22 @@ const BottomNavigation = () => {
       }, 500);
     }
     
-    // Используем react-router-dom для навигации вместо прямого изменения хеша
-    navigate(path);
+    try {
+      // Сначала пробуем react-router-dom для навигации
+      navigate(path);
+      
+      // Затем дублируем навигацию через хеш для надежности
+      setTimeout(() => {
+        if (window.location.hash !== `#${path}`) {
+          console.log('Корректировка хеша:', path);
+          window.location.hash = path;
+        }
+      }, 50);
+    } catch (error) {
+      console.error('Ошибка навигации:', error);
+      // Запасной вариант - прямая установка хеша
+      window.location.hash = path;
+    }
     
     // Сбрасываем скролл наверх
     window.scrollTo(0, 0);
@@ -117,6 +133,8 @@ const BottomNavigation = () => {
             item.path === activeRoute || 
             (item.path === '/' && (activeRoute === '' || activeRoute === '/')) ||
             (activeRoute.startsWith(item.path) && item.path !== '/');
+            
+          console.log(`Проверка активности ${item.path}:`, isActive);
           
           return (
             <a

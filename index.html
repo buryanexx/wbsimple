@@ -12,6 +12,12 @@
     <title>WB Simple - Образовательная платформа</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <script type="text/javascript">
+      // Первичная проверка хеша - если есть хеш, но он пустой, перенаправляем на корень
+      if (window.location.hash === '#' || window.location.hash === '#/') {
+        console.log('Обнаружен пустой хеш, перенаправляем на главную');
+        window.location.replace('./');
+      }
+      
       // Инициализация Telegram WebApp с улучшенной навигацией
       (function() {
         // Глобальные переменные для хранения логов и состояния
@@ -303,5 +309,37 @@
   <body>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
+    
+    <!-- Проверка роутинга и отладка -->
+    <script>
+      // Обработчик изменения хеша для отладки
+      window.addEventListener('hashchange', function(e) {
+        console.log('Изменение хеша:', window.location.hash);
+        
+        // Если хеш пустой, а загрузка уже завершена - перенаправляем на главную
+        if (window.location.hash === '#' || window.location.hash === '#/') {
+          console.log('Пустой хеш обнаружен, перезагружаем страницу');
+          // Добавляем проверку, чтобы избежать бесконечного редиректа 
+          if (window.reactAppMounted) {
+            window.location.reload();
+          }
+        }
+      });
+      
+      // Обработка ошибок при загрузке страницы
+      window.addEventListener('error', function(e) {
+        console.error('Глобальная ошибка:', e.message);
+      });
+      
+      // Контроль загрузки страницы
+      window.addEventListener('load', function() {
+        console.log('Страница полностью загружена');
+        
+        // Проверяем хеш при загрузке
+        if (!window.location.hash || window.location.hash === '#' || window.location.hash === '#/') {
+          console.log('Пустой хеш при загрузке страницы, устанавливаем главную');
+        }
+      });
+    </script>
   </body>
 </html>
