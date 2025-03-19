@@ -35,12 +35,44 @@ const ProfilePage = () => {
   const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'info' | 'progress' | 'debug'>('info');
+  
+  // API URLs
+  const API_BASE_URL = process.env.REACT_APP_API_URL || 'https://api.wbsimple.ru/api';
 
   useEffect(() => {
-    // Имитация загрузки данных
-    const timer = setTimeout(() => {
-      setIsLoading(false);
-    }, 600);
+    // Загрузка данных пользователя
+    const fetchUserData = async () => {
+      if (!isAuthenticated) {
+        setIsLoading(false);
+        return;
+      }
+
+      try {
+        // В реальном проекте здесь будет запрос к API для получения данных профиля
+        // const response = await fetch(`${API_BASE_URL}/users/profile`, {
+        //   method: 'GET',
+        //   headers: {
+        //     'Authorization': `Bearer ${user?.token}`,
+        //     'Content-Type': 'application/json'
+        //   }
+        // });
+        
+        // if (response.ok) {
+        //   const profileData = await response.json();
+        //   // Обновление данных пользователя при необходимости
+        // }
+        
+        // Имитация задержки загрузки
+        setTimeout(() => {
+          setIsLoading(false);
+        }, 600);
+      } catch (error) {
+        console.error('Ошибка при загрузке данных профиля:', error);
+        setIsLoading(false);
+      }
+    };
+    
+    fetchUserData();
     
     // Настраиваем кнопку назад
     if (webApp?.BackButton) {
@@ -50,39 +82,60 @@ const ProfilePage = () => {
         return true;
       });
     }
-
-    // Автоматическая авторизация, если находимся в Telegram
-    if (webApp && !isAuthenticated) {
-      tryTelegramAuth();
-    }
     
     return () => {
-      clearTimeout(timer);
       if (webApp?.BackButton) {
         webApp.BackButton.hide();
       }
     };
-  }, [webApp, navigate, isAuthenticated]);
+  }, [webApp, navigate, isAuthenticated, user]);
 
-  // Функция для автоматической авторизации через Telegram
-  const tryTelegramAuth = async () => {
-    if (!webApp?.initDataUnsafe?.user) {
-      console.log('Нет данных пользователя в Telegram WebApp');
-      return;
-    }
+  // Функция для автоматического запуска основного действия в Telegram
+  const activateMainButton = (text: string, action: () => void) => {
+    if (!webApp?.MainButton) return;
+    
+    webApp.MainButton.setText(text);
+    webApp.MainButton.onClick(action);
+    webApp.MainButton.show();
+    
+    return () => {
+      webApp.MainButton.offClick(action);
+      webApp.MainButton.hide();
+    };
+  };
 
+  // Функция для обращения к API для обновления профиля
+  const updateProfile = async (data: any) => {
+    if (!isAuthenticated || !user) return;
+    
     try {
-      // Здесь был бы запрос к API для авторизации через Telegram
-      // В демо-режиме просто отображаем сообщение
-      webApp.showPopup({
-        title: 'Авторизация через Telegram',
-        message: 'В реальном приложении здесь будет полноценная авторизация пользователя через данные Telegram WebApp.',
-        buttons: [{ id: 'ok', type: 'ok', text: 'Понятно' }]
-      });
-    } catch (error) {
-      console.error('Ошибка при авторизации через Telegram:', error);
+      // В реальном проекте здесь будет запрос к API
+      // const response = await fetch(`${API_BASE_URL}/users/profile`, {
+      //   method: 'PATCH',
+      //   headers: {
+      //     'Authorization': `Bearer ${user.token}`,
+      //     'Content-Type': 'application/json'
+      //   },
+      //   body: JSON.stringify(data)
+      // });
+      
+      // if (response.ok) {
+      //   const updatedProfile = await response.json();
+      //   // Обновление данных пользователя при необходимости
+      // }
+      
+      // Для демонстрации показываем сообщение
       if (webApp) {
-        webApp.showAlert('Ошибка авторизации через Telegram. Попробуйте позже.');
+        webApp.showPopup({
+          title: 'Обновление профиля',
+          message: 'В реальном приложении данные профиля будут обновлены на сервере.',
+          buttons: [{ id: 'ok', type: 'ok', text: 'OK' }]
+        });
+      }
+    } catch (error) {
+      console.error('Ошибка при обновлении профиля:', error);
+      if (webApp) {
+        webApp.showAlert('Ошибка при обновлении профиля. Пожалуйста, попробуйте позже.');
       }
     }
   };
@@ -105,6 +158,7 @@ const ProfilePage = () => {
         window.location.reload();
       }
     } catch (error) {
+      console.error('Ошибка при очистке хранилища:', error);
       alert('Ошибка очистки: ' + error);
     }
   };
@@ -118,7 +172,12 @@ const ProfilePage = () => {
         window.location.hash = path;
       }
     } catch (error) {
-      alert('Ошибка навигации: ' + error);
+      console.error('Ошибка навигации:', error);
+      if (webApp) {
+        webApp.showAlert('Ошибка навигации: ' + error);
+      } else {
+        alert('Ошибка навигации: ' + error);
+      }
     }
   };
 
@@ -437,6 +496,8 @@ const ProfilePage = () => {
                     <p className="mb-1">Hash: {window.location.hash}</p>
                     <p className="mb-1">PathName: {window.location.pathname}</p>
                     <p className="mb-1">WebApp: {webApp ? 'Доступен' : 'Недоступен'}</p>
+                    <p className="mb-1">User ID: {user?.id}</p>
+                    <p className="mb-1">TG ID: {user?.telegramId}</p>
                     <p>Версия: 1.0.0</p>
                   </div>
                 </>
