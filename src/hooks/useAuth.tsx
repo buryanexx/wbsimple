@@ -36,8 +36,25 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 // Провайдер аутентификации
 export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-  const [user, setUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState(true);
+  // Создаем тестового пользователя для демонстрации
+  const testUser: User = {
+    id: 1,
+    telegramId: 123456789,
+    firstName: 'Тестовый',
+    lastName: 'Пользователь',
+    username: 'test_user',
+    isAdmin: false,
+    hasActiveSubscription: true,
+    subscriptionEndDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+    token: 'test_token',
+    progress: {
+      completedLessons: [1, 2, 3],
+      completedModules: [1]
+    }
+  };
+  
+  const [user, setUser] = useState<User | null>(testUser); // Используем тестового пользователя
+  const [loading, setLoading] = useState(false); // Уменьшаем время загрузки
   const [error, setError] = useState<string | null>(null);
   const webApp = useWebApp();
 

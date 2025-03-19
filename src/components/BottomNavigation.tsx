@@ -39,7 +39,7 @@ const BottomNavigation = () => {
           return (
             <a
               key={item.path}
-              href={`/#${item.path}`} // Прямая ссылка с хешем
+              href={`#${item.path}`} // Убираю первый слеш чтобы не было дублирования
               className={`flex flex-col items-center py-2 px-3 transition-colors duration-200 ${
                 isActive
                   ? 'text-primary'

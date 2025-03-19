@@ -133,13 +133,9 @@ function AppContent() {
         <Route path="/success-stories" element={<SuccessStoriesPage />} />
         <Route path="/master-class" element={<MasterClassPage />} />
         <Route path="/timeline" element={<TimelinePage />} />
+        <Route path="/modules" element={<ModulesPage />} />
         
         {/* Защищенные маршруты */}
-        <Route path="/modules" element={
-          <ProtectedRoute>
-            <ModulesPage />
-          </ProtectedRoute>
-        } />
         <Route path="/lesson/:moduleId/:lessonId" element={
           <ProtectedRoute>
             <LessonPage />
@@ -175,6 +171,7 @@ function AppContent() {
 
 function App() {
   // Используем HashRouter для максимальной совместимости с Telegram WebApp
+  // и явно указываем, что базовым URL должен быть '/'
   return (
     <Router>
       <AuthProvider>
