@@ -1,15 +1,16 @@
 services:
   - type: web
     name: wbsimple-api
-    env: node
+    runtime: node
     buildCommand: npm install && npm run build
     startCommand: npm start
+    plan: starter
     envVars:
-      - key: PORT
-        value: 5000
       - key: NODE_ENV
         value: production
-      - key: MONGODB_URI
+      - key: PORT
+        value: 5000
+      - key: DATABASE_URL
         sync: false
       - key: JWT_SECRET
         sync: false
@@ -18,4 +19,4 @@ services:
       - key: TELEGRAM_PAYMENT_TOKEN
         sync: false
       - key: WEBAPP_URL
-        sync: false 
+        value: https://wbsimple.vercel.app 

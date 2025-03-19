@@ -115,14 +115,14 @@ const SubscriptionPage = () => {
   if (isLoading) {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen p-4">
-        <div className="w-16 h-16 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
+        <div className="w-16 h-16 border-4 border-[#6A45E8] border-t-transparent rounded-full animate-spin"></div>
         <p className="mt-4 text-gray-600 dark:text-gray-400">Загрузка информации о подписке...</p>
       </div>
     );
   }
 
   return (
-    <div className="flex flex-col items-center justify-center p-4 space-y-6 pb-44 animate-fade-in">
+    <div className="flex flex-col items-center justify-center p-4 space-y-6 pb-36 animate-fade-in">
       <div className="w-full max-w-md">
         <Button 
           variant="ghost" 
@@ -133,7 +133,7 @@ const SubscriptionPage = () => {
           Назад
         </Button>
         
-        <h1 className="text-2xl font-bold text-center mb-2 animate-slide-in-right">
+        <h1 className="text-2xl font-bold text-center mb-2 animate-slide-in-right text-[#6A45E8]">
           Подписка на WB Simple
         </h1>
         
@@ -144,7 +144,7 @@ const SubscriptionPage = () => {
         {/* Карточка плана */}
         <Card 
           variant="primary" 
-          className="mb-6 animate-slide-in-right" 
+          className="mb-6 animate-slide-in-right bg-gradient-to-r from-[#6A45E8]/10 to-[#8A65FF]/10" 
         >
           <div style={{ animationDelay: '200ms' }}>
             <div className="flex justify-between items-center mb-4">
@@ -152,8 +152,8 @@ const SubscriptionPage = () => {
                 Ежемесячная подписка
               </h2>
               <div className="text-right">
-                <span className="text-2xl font-bold text-primary">
-                  999 ₽
+                <span className="text-2xl font-bold text-[#6A45E8]">
+                  1899 ₽
                 </span>
                 <div className="text-xs text-gray-500 dark:text-gray-400">
                   за месяц
@@ -164,7 +164,7 @@ const SubscriptionPage = () => {
             <ul className="space-y-3 mb-4">
               {subscriptionFeatures.map((feature, index) => (
                 <li key={index} className="flex items-start animate-slide-in-right" style={{ animationDelay: `${300 + index * 100}ms` }}>
-                  <div className="bg-primary/10 text-primary rounded-full w-8 h-8 flex items-center justify-center mr-3 mt-0.5">
+                  <div className="bg-[#6A45E8]/10 text-[#6A45E8] rounded-full w-8 h-8 flex items-center justify-center mr-3 mt-0.5">
                     <span>{feature.icon}</span>
                   </div>
                   <div>
@@ -187,7 +187,7 @@ const SubscriptionPage = () => {
           className="mb-6 animate-slide-in-right" 
         >
           <div style={{ animationDelay: '300ms' }}>
-            <h3 className="text-lg font-semibold mb-4">Сравнение возможностей</h3>
+            <h3 className="text-lg font-semibold mb-4 text-[#6A45E8]">Сравнение возможностей</h3>
             
             <div className="overflow-x-auto">
               <table className="w-full">
@@ -195,7 +195,7 @@ const SubscriptionPage = () => {
                   <tr className="border-b border-gray-200 dark:border-gray-700">
                     <th className="text-left py-2">Функция</th>
                     <th className="text-center py-2">Бесплатно</th>
-                    <th className="text-center py-2">Премиум</th>
+                    <th className="text-center py-2 text-[#6A45E8]">Премиум</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -209,7 +209,7 @@ const SubscriptionPage = () => {
                       </td>
                       <td className="py-3 text-center">
                         {item.premium ? 
-                          <span className="text-green-500">✓</span> : 
+                          <span className="text-[#6A45E8]">✓</span> : 
                           <span className="text-red-500">✗</span>}
                       </td>
                     </tr>
@@ -227,7 +227,7 @@ const SubscriptionPage = () => {
             className="animate-slide-in-right" 
           >
             <div>
-              <h3 className="text-lg font-semibold mb-2">Истории успеха наших учеников</h3>
+              <h3 className="text-lg font-semibold mb-2 text-[#6A45E8]">Истории успеха наших учеников</h3>
               <div className="space-y-3">
                 <div className="p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
                   <p className="text-sm italic mb-2">
@@ -248,27 +248,18 @@ const SubscriptionPage = () => {
               </div>
               <div className="mt-4 text-center">
                 <Button 
-                  variant="ghost" 
-                  onClick={() => navigate('/success-stories')}
+                  variant="primary"
+                  size="lg"
+                  fullWidth
+                  className="bg-gradient-to-r from-[#6A45E8] to-[#8A65FF] border-none"
+                  onClick={handleSubscribe}
                 >
-                  Больше историй успеха
+                  Оформить подписку за 1899₽
                 </Button>
               </div>
             </div>
           </Card>
         </div>
-      </div>
-      
-      <div className="fixed bottom-20 left-0 right-0 p-4 bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-700">
-        <Button 
-          variant="accent" 
-          size="lg"
-          fullWidth
-          onClick={handleSubscribe}
-          className="animate-pulse-subtle"
-        >
-          Оформить подписку за 999 ₽/месяц
-        </Button>
       </div>
     </div>
   );

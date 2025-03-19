@@ -14,6 +14,7 @@ const BottomNavigation = () => {
     return null;
   }
 
+  // Оптимизированные элементы навигации (4 пункта)
   const navItems = [
     {
       name: 'Главная',
@@ -31,11 +32,6 @@ const BottomNavigation = () => {
       icon: 'templates'
     },
     {
-      name: 'Канал',
-      path: '/channel',
-      icon: 'channel'
-    },
-    {
       name: 'Профиль',
       path: '/profile',
       icon: 'profile'
@@ -51,7 +47,7 @@ const BottomNavigation = () => {
             <button
               key={item.path}
               onClick={() => navigate(item.path)}
-              className={`flex flex-col items-center py-3 px-4 transition-colors duration-200 ${
+              className={`flex flex-col items-center py-2 px-3 transition-colors duration-200 ${
                 isActive
                   ? 'text-primary'
                   : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
@@ -59,7 +55,7 @@ const BottomNavigation = () => {
             >
               <Icon 
                 name={item.icon} 
-                size={22} 
+                size={20} 
                 className={isActive ? 'animate-pulse' : ''} 
               />
               <span className="text-xs mt-1 font-medium">{item.name}</span>

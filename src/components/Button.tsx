@@ -1,6 +1,6 @@
 import React, { ButtonHTMLAttributes, ReactNode } from 'react';
 
-type ButtonVariant = 'primary' | 'secondary' | 'accent' | 'outline' | 'ghost';
+type ButtonVariant = 'primary' | 'secondary' | 'accent' | 'outline' | 'ghost' | 'white';
 type ButtonSize = 'sm' | 'md' | 'lg';
 
 interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
@@ -32,7 +32,8 @@ const Button: React.FC<ButtonProps> = ({
     secondary: 'bg-gray-200 hover:bg-gray-300 text-gray-800 dark:bg-gray-700 dark:hover:bg-gray-600 dark:text-gray-200 focus:ring-gray-500/50',
     accent: 'bg-accent hover:bg-accent-dark text-white focus:ring-accent/50',
     outline: 'bg-transparent border border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-300 focus:ring-gray-500/50',
-    ghost: 'bg-transparent hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-300 focus:ring-gray-500/50'
+    ghost: 'bg-transparent hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-300 focus:ring-gray-500/50',
+    white: 'bg-white hover:bg-gray-100 text-gray-700 dark:hover:bg-gray-800 focus:ring-gray-500/50'
   };
   
   const sizeClasses = {

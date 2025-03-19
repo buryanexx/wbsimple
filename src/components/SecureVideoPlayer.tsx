@@ -1,169 +1,247 @@
-import { useState, useEffect, useRef } from 'react';
-import ReactPlayer from 'react-player/lazy';
-import { useWebApp } from '@vkruglikov/react-telegram-web-app';
-import axios from 'axios';
-
-// Базовый URL API
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+import React, { useEffect, useRef, useState } from 'react';
+import { useAuth } from '../hooks/useAuth.tsx';
+import { API_URL } from '../config';
 
 interface SecureVideoPlayerProps {
   videoId: string;
-  onReady?: () => void;
-  onError?: (error: Error) => void;
-  onProgress?: (progress: { played: number; playedSeconds: number }) => void;
-  onEnded?: () => void;
+  lessonId: string;
+  onProgress?: (progress: number) => void;
+  onComplete?: () => void;
+  className?: string;
 }
 
 const SecureVideoPlayer: React.FC<SecureVideoPlayerProps> = ({
   videoId,
-  onReady,
-  onError,
+  lessonId,
   onProgress,
-  onEnded
+  onComplete,
+  className = '',
 }) => {
+  const { user } = useAuth();
   const [videoUrl, setVideoUrl] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const playerRef = useRef<ReactPlayer | null>(null);
-  const webApp = useWebApp();
-  const urlExpiryTimeRef = useRef<number | null>(null);
-  const refreshTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const progressInterval = useRef<number | null>(null);
+  const [currentProgress, setCurrentProgress] = useState(0);
 
-  // Функция для получения защищенного URL видео
-  const getSecureVideoUrl = async () => {
-    try {
-      setIsLoading(true);
-      setError(null);
-
-      const token = localStorage.getItem('token');
-      const initData = localStorage.getItem('telegram_init_data') || webApp?.initData;
-      
-      if (!token || !initData) {
-        throw new Error('Не авторизован');
-      }
-
-      const response = await axios.get(`${API_URL}/videos/${videoId}/secure-url`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-          'X-Telegram-Init-Data': initData
+  // Получение защищенного URL для видео
+  useEffect(() => {
+    const fetchSecureUrl = async () => {
+      try {
+        if (!user) {
+          setError('Необходима авторизация для просмотра видео');
+          setLoading(false);
+          return;
         }
+
+        const response = await fetch(`${API_URL}/api/videos/secure-url/${videoId}`, {
+          headers: {
+            Authorization: `Bearer ${user.token}`,
+          },
+        });
+
+        if (!response.ok) {
+          throw new Error('Не удалось получить доступ к видео');
+        }
+
+        const data = await response.json();
+        setVideoUrl(data.secureUrl);
+        setLoading(false);
+      } catch (err) {
+        console.error('Ошибка при получении URL видео:', err);
+        setError('Не удалось загрузить видео. Пожалуйста, попробуйте позже.');
+        setLoading(false);
+      }
+    };
+
+    fetchSecureUrl();
+  }, [videoId, user]);
+
+  // Получение прогресса просмотра видео
+  useEffect(() => {
+    const fetchVideoProgress = async () => {
+      try {
+        if (!user) return;
+
+        const response = await fetch(`${API_URL}/api/videos/progress/${videoId}`, {
+          headers: {
+            Authorization: `Bearer ${user.token}`,
+          },
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          if (data.progress && videoRef.current) {
+            // Устанавливаем время видео на сохраненную позицию
+            const duration = videoRef.current.duration;
+            if (!isNaN(duration)) {
+              videoRef.current.currentTime = (data.progress / 100) * duration;
+              setCurrentProgress(data.progress);
+            }
+          }
+        }
+      } catch (err) {
+        console.error('Ошибка при получении прогресса видео:', err);
+      }
+    };
+
+    if (videoRef.current && videoRef.current.readyState > 0) {
+      fetchVideoProgress();
+    }
+  }, [videoId, user, videoUrl]);
+
+  // Обработка событий видео
+  useEffect(() => {
+    const videoElement = videoRef.current;
+    if (!videoElement) return;
+
+    const handleTimeUpdate = () => {
+      if (!videoElement) return;
+      
+      const duration = videoElement.duration;
+      if (isNaN(duration)) return;
+      
+      const currentTime = videoElement.currentTime;
+      const progress = Math.floor((currentTime / duration) * 100);
+      
+      setCurrentProgress(progress);
+      
+      if (onProgress) {
+        onProgress(progress);
+      }
+      
+      // Если прогресс больше 90%, считаем видео просмотренным
+      if (progress >= 90 && onComplete) {
+        onComplete();
+      }
+    };
+
+    const handleEnded = () => {
+      if (onComplete) {
+        onComplete();
+      }
+    };
+
+    // Добавляем обработчики событий
+    videoElement.addEventListener('timeupdate', handleTimeUpdate);
+    videoElement.addEventListener('ended', handleEnded);
+
+    // Настраиваем интервал для отправки прогресса на сервер
+    progressInterval.current = window.setInterval(() => {
+      if (!user || !videoElement) return;
+      
+      const duration = videoElement.duration;
+      if (isNaN(duration)) return;
+      
+      const currentTime = videoElement.currentTime;
+      const progress = Math.floor((currentTime / duration) * 100);
+      
+      // Отправляем прогресс на сервер каждые 10 секунд
+      fetch(`${API_URL}/api/videos/mark-watched/${videoId}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${user.token}`,
+        },
+        body: JSON.stringify({
+          progress,
+          lessonId,
+        }),
+      }).catch(err => {
+        console.error('Ошибка при отправке прогресса:', err);
       });
+    }, 10000); // Каждые 10 секунд
 
-      const { url, expiresIn } = response.data;
+    return () => {
+      // Удаляем обработчики событий при размонтировании
+      videoElement.removeEventListener('timeupdate', handleTimeUpdate);
+      videoElement.removeEventListener('ended', handleEnded);
       
-      // Сохраняем время истечения URL
-      urlExpiryTimeRef.current = Date.now() + (expiresIn * 1000);
-      
-      // Устанавливаем таймер для обновления URL за 30 секунд до истечения срока
-      if (refreshTimerRef.current) {
-        clearTimeout(refreshTimerRef.current);
+      // Очищаем интервал
+      if (progressInterval.current) {
+        clearInterval(progressInterval.current);
       }
       
-      refreshTimerRef.current = setTimeout(() => {
-        getSecureVideoUrl();
-      }, (expiresIn - 30) * 1000);
-
-      setVideoUrl(url);
-      return url;
-    } catch (err: any) {
-      const errorMessage = err.response?.data?.message || err.message || 'Ошибка при получении URL видео';
-      setError(errorMessage);
-      if (onError) {
-        onError(new Error(errorMessage));
+      // Отправляем финальный прогресс при размонтировании
+      if (user && currentProgress > 0) {
+        fetch(`${API_URL}/api/videos/mark-watched/${videoId}`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${user.token}`,
+          },
+          body: JSON.stringify({
+            progress: currentProgress,
+            lessonId,
+          }),
+        }).catch(err => {
+          console.error('Ошибка при отправке финального прогресса:', err);
+        });
       }
-      return null;
-    } finally {
-      setIsLoading(false);
+    };
+  }, [videoId, user, onProgress, onComplete, lessonId, currentProgress]);
+
+  // Обработчик события загрузки метаданных видео
+  const handleLoadedMetadata = () => {
+    if (videoRef.current && user) {
+      // Получаем прогресс просмотра после загрузки метаданных
+      fetch(`${API_URL}/api/videos/progress/${videoId}`, {
+        headers: {
+          Authorization: `Bearer ${user.token}`,
+        },
+      })
+        .then(response => {
+          if (response.ok) return response.json();
+          throw new Error('Не удалось получить прогресс');
+        })
+        .then(data => {
+          if (data.progress && videoRef.current) {
+            const duration = videoRef.current.duration;
+            videoRef.current.currentTime = (data.progress / 100) * duration;
+            setCurrentProgress(data.progress);
+          }
+        })
+        .catch(err => {
+          console.error('Ошибка при получении прогресса:', err);
+        });
     }
   };
 
-  useEffect(() => {
-    getSecureVideoUrl();
-    
-    // Очистка при размонтировании
-    return () => {
-      if (refreshTimerRef.current) {
-        clearTimeout(refreshTimerRef.current);
-      }
-    };
-  }, [videoId]);
-
-  // Обработчик события контекстного меню (правый клик)
-  const handleContextMenu = (e: React.MouseEvent) => {
-    e.preventDefault();
-    return false;
-  };
-
-  // Обработчик события копирования
-  const handleCopy = (e: React.ClipboardEvent) => {
-    e.preventDefault();
-    return false;
-  };
-
-  if (isLoading) {
+  if (loading) {
     return (
-      <div className="flex items-center justify-center w-full h-full min-h-[200px] bg-gray-200 dark:bg-gray-800 rounded-lg">
-        <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
+      <div className={`flex items-center justify-center h-48 bg-gray-100 rounded-lg ${className}`}>
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
       </div>
     );
   }
 
-  if (error || !videoUrl) {
+  if (error) {
     return (
-      <div className="flex flex-col items-center justify-center w-full h-full min-h-[200px] bg-gray-200 dark:bg-gray-800 rounded-lg p-4">
-        <div className="text-red-500 text-xl mb-2">⚠️</div>
-        <p className="text-center text-gray-700 dark:text-gray-300">
-          {error || 'Не удалось загрузить видео'}
-        </p>
-        <button 
-          className="mt-4 px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-dark transition-colors"
-          onClick={() => getSecureVideoUrl()}
-        >
-          Попробовать снова
-        </button>
+      <div className={`flex items-center justify-center h-48 bg-gray-100 rounded-lg ${className}`}>
+        <div className="text-center text-red-500 p-4">{error}</div>
       </div>
     );
   }
 
   return (
-    <div 
-      className="video-container relative w-full h-0 pb-[56.25%] bg-black rounded-lg overflow-hidden select-none"
-      onContextMenu={handleContextMenu}
-      onCopy={handleCopy}
-    >
-      <ReactPlayer
-        ref={playerRef}
-        url={videoUrl}
-        width="100%"
-        height="100%"
-        style={{ position: 'absolute', top: 0, left: 0 }}
+    <div className={`relative ${className}`}>
+      <video
+        ref={videoRef}
+        src={videoUrl || undefined}
+        className="w-full rounded-lg"
         controls
-        playing
-        onReady={onReady}
-        onError={() => {
-          setError('Ошибка при загрузке видео');
-          setIsLoading(false);
-        }}
-        onProgress={onProgress}
-        onEnded={onEnded}
-        config={{
-          file: {
-            attributes: {
-              controlsList: 'nodownload noremoteplayback',
-              disablePictureInPicture: true,
-              disableRemotePlayback: true
-            },
-            forceVideo: true
-          }
-        }}
+        playsInline
+        onLoadedMetadata={handleLoadedMetadata}
       />
-      
-      {/* Водяной знак с ID пользователя */}
-      <div className="absolute top-0 left-0 w-full h-full pointer-events-none">
-        <div className="absolute bottom-4 right-4 text-white text-opacity-50 text-sm">
-          {webApp?.initDataUnsafe?.user?.id || 'WB Simple'}
+      {currentProgress > 0 && currentProgress < 100 && (
+        <div className="absolute bottom-0 left-0 w-full h-1 bg-gray-200">
+          <div
+            className="h-full bg-primary"
+            style={{ width: `${currentProgress}%` }}
+          ></div>
         </div>
-      </div>
+      )}
     </div>
   );
 };

@@ -6,15 +6,16 @@ import Button from '../components/Button';
 import Icon from '../components/Icon';
 import SecureVideoPlayer from '../components/SecureVideoPlayer';
 import { modulesData } from '../data/modules';
-import { useAuth } from '../hooks/useAuth';
+import { useAuth } from '../hooks/useAuth.tsx';
 
 const LessonPage = () => {
   const { moduleId = '0', lessonId = '0' } = useParams();
   const navigate = useNavigate();
   const webApp = useWebApp();
-  const { user, loading } = useAuth();
+  const { user, loading, isAuthenticated, isPremium, markLessonCompleted, hasCompletedLesson } = useAuth();
   const [activeTab, setActiveTab] = useState<'video' | 'materials'>('video');
   const [isLoading, setIsLoading] = useState(true);
+  const [videoCompleted, setVideoCompleted] = useState(false);
   
   // Получаем данные урока
   const moduleIdNum = parseInt(moduleId);
@@ -45,17 +46,24 @@ const LessonPage = () => {
     
     // Проверяем, требуется ли премиум-подписка для доступа к модулю
     const isPremiumModule = !moduleData.isFree; // Проверяем свойство isFree модуля
-    if (isPremiumModule && user && !user.isSubscribed) {
+    if (isPremiumModule && !isPremium) {
       navigate('/subscription');
       return;
     }
     
     return () => clearTimeout(timer);
-  }, [moduleId, lessonId, navigate, user]);
+  }, [moduleId, lessonId, navigate, isPremium]);
   
   useEffect(() => {
     // Сбрасываем состояние при изменении урока
     setActiveTab('video');
+    
+    // Проверяем, завершен ли урок
+    if (lesson && hasCompletedLesson(lessonIdNum)) {
+      setVideoCompleted(true);
+    } else {
+      setVideoCompleted(false);
+    }
     
     // Настраиваем кнопку Telegram
     if (webApp?.BackButton) {
@@ -69,19 +77,26 @@ const LessonPage = () => {
       webApp?.BackButton?.hide();
       webApp?.MainButton?.hide();
     };
-  }, [moduleId, lessonId, webApp, navigate]);
+  }, [moduleId, lessonId, webApp, navigate, lesson, hasCompletedLesson, lessonIdNum]);
   
-  // Обработчики событий видеоплеера
-  const handleVideoReady = () => {
-    // Здесь можно добавить логику для отметки урока как просмотренного
+  // Обработчик завершения видео
+  const handleVideoComplete = async () => {
+    if (!videoCompleted && isAuthenticated) {
+      setVideoCompleted(true);
+      try {
+        await markLessonCompleted(lessonIdNum);
+      } catch (error) {
+        console.error('Ошибка при отметке урока как завершенного:', error);
+      }
+    }
   };
   
-  const handleVideoError = (error: Error) => {
-    // Здесь можно добавить логику для обработки ошибок видео
-  };
-  
-  const handleVideoProgress = () => {
-    // Здесь можно добавить логику для отслеживания прогресса просмотра
+  // Обработчик прогресса видео
+  const handleVideoProgress = (progress: number) => {
+    // Если прогресс больше 90%, считаем видео просмотренным
+    if (progress >= 90 && !videoCompleted && isAuthenticated) {
+      handleVideoComplete();
+    }
   };
   
   if (isLoading || loading) {
@@ -118,15 +133,15 @@ const LessonPage = () => {
   const getMaterialIcon = (type: string) => {
     switch (type) {
       case 'pdf':
-        return <span className="text-red-500">📄</span>;
+        return <Icon name="file" className="text-red-500" />;
       case 'doc':
-        return <span className="text-blue-500">📝</span>;
+        return <Icon name="file" className="text-blue-500" />;
       case 'xls':
-        return <span className="text-green-500">📊</span>;
+        return <Icon name="file" className="text-green-500" />;
       case 'link':
-        return <span className="text-purple-500">🔗</span>;
+        return <Icon name="link" className="text-purple-500" />;
       default:
-        return <span className="text-gray-500">📁</span>;
+        return <Icon name="file" className="text-gray-500" />;
     }
   };
   
@@ -177,21 +192,46 @@ const LessonPage = () => {
           <div>
             <div className="mb-6">
               <div className="aspect-w-16 aspect-h-9 mb-4 bg-gray-200 dark:bg-gray-800 rounded-lg overflow-hidden relative">
-                <SecureVideoPlayer
-                  videoId={lesson.videoId}
-                  onReady={handleVideoReady}
-                  onError={handleVideoError}
-                  onProgress={handleVideoProgress}
-                />
+                {isAuthenticated ? (
+                  <SecureVideoPlayer
+                    videoId={lesson.videoId}
+                    lessonId={lessonIdNum.toString()}
+                    onProgress={handleVideoProgress}
+                    onComplete={handleVideoComplete}
+                    className="w-full h-full"
+                  />
+                ) : (
+                  <div className="flex items-center justify-center h-full bg-gray-200 dark:bg-gray-800">
+                    <div className="text-center p-4">
+                      <p className="text-gray-700 dark:text-gray-300 mb-4">
+                        Для просмотра видео необходимо авторизоваться
+                      </p>
+                      <Button 
+                        variant="primary" 
+                        onClick={() => navigate('/')}
+                      >
+                        Войти
+                      </Button>
+                    </div>
+                  </div>
+                )}
               </div>
               <Card className="mb-4 animate-slide-in-right">
                 <h2 className="text-xl font-semibold mb-2">{lesson.title}</h2>
                 <p className="text-gray-700 dark:text-gray-300 mb-4">
                   {lesson.description}
                 </p>
-                <div className="flex items-center text-sm text-gray-500 dark:text-gray-400">
-                  <span className="mr-2">⏱️</span>
-                  <span>Продолжительность: {lesson.duration}</span>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center text-sm text-gray-500 dark:text-gray-400">
+                    <span className="mr-2">⏱️</span>
+                    <span>Продолжительность: {lesson.duration}</span>
+                  </div>
+                  {videoCompleted && (
+                    <div className="flex items-center text-sm text-green-500">
+                      <span className="mr-2">✅</span>
+                      <span>Просмотрено</span>
+                    </div>
+                  )}
                 </div>
               </Card>
             </div>
@@ -251,12 +291,12 @@ const LessonPage = () => {
                           </div>
                           <div className="flex-1">
                             <h3 className="font-medium">{material.title}</h3>
-                            <p className="text-sm text-gray-600 dark:text-gray-400">
+                            <p className="text-sm text-gray-500 dark:text-gray-400">
                               {material.description}
                             </p>
                           </div>
-                          <div className="text-primary">
-                            <span className="text-lg">⬇️</span>
+                          <div className="ml-2">
+                            <Icon name="download" className="text-gray-400" />
                           </div>
                         </a>
                       </Card>
@@ -264,8 +304,8 @@ const LessonPage = () => {
                   ))}
                 </ul>
               ) : (
-                <p className="text-gray-600 dark:text-gray-400">
-                  Для этого урока нет дополнительных материалов.
+                <p className="text-gray-500 dark:text-gray-400 text-center py-4">
+                  Для этого урока нет дополнительных материалов
                 </p>
               )}
             </Card>

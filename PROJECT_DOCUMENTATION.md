@@ -1,4 +1,4 @@
-# Документация проекта WB Simple
+.           # Документация проекта WB Simple
 
 ## Общая информация
 
@@ -254,6 +254,7 @@ VITE_API_URL=http://your-api-url.com/api
 - **Деплой:** [https://username.github.io/wbsimple](https://username.github.io/wbsimple)
 - **Дизайн:** [Figma](https://figma.com/file/...)
 - **API документация:** [Swagger](https://api.example.com/docs)
+
 
 ## Заключение
 

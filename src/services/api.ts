@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 // Базовый URL API
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5005/api';
 
 // Создаем экземпляр axios с базовым URL
 const api = axios.create({
@@ -14,17 +14,10 @@ const api = axios.create({
 // Интерцептор для добавления токена авторизации
 api.interceptors.request.use(
   (config) => {
-    const token = localStorage.getItem('token');
-    const initData = localStorage.getItem('telegram_init_data');
-    
+    const token = localStorage.getItem('admin_token');
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
-    
-    if (initData && !config.headers['X-Telegram-Init-Data']) {
-      config.headers['X-Telegram-Init-Data'] = initData;
-    }
-    
     return config;
   },
   (error) => Promise.reject(error)
@@ -34,10 +27,10 @@ api.interceptors.request.use(
 api.interceptors.response.use(
   (response) => response,
   (error) => {
-    // Если ошибка 401 (Unauthorized), очищаем токен и перенаправляем на главную
+    // Если ошибка 401 (не авторизован), перенаправляем на страницу входа
     if (error.response && error.response.status === 401) {
-      localStorage.removeItem('token');
-      window.location.href = '/';
+      localStorage.removeItem('admin_token');
+      window.location.href = '/login';
     }
     return Promise.reject(error);
   }
@@ -120,11 +113,4 @@ export const videosAPI = {
   getVideoProgress: (videoId: string) => api.get(`/videos/${videoId}/progress`)
 };
 
-export default {
-  authAPI,
-  modulesAPI,
-  lessonsAPI,
-  templatesAPI,
-  subscriptionsAPI,
-  videosAPI
-}; 
+export default api; 

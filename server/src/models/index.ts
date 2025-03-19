@@ -3,6 +3,7 @@ import Module from './Module.js';
 import Lesson from './Lesson.js';
 import UserProgress from './UserProgress.js';
 import Subscription from './Subscription.js';
+import VideoProgress from './VideoProgress.js';
 import sequelize from '../config/database.js';
 
 // Определение ассоциаций между моделями
@@ -18,7 +19,7 @@ Lesson.belongsTo(Module, {
 
 User.hasMany(UserProgress, {
   foreignKey: 'userId',
-  as: 'progress',
+  as: 'userProgresses',
 });
 
 UserProgress.belongsTo(User, {
@@ -56,6 +57,17 @@ Subscription.belongsTo(User, {
   as: 'user',
 });
 
+// Ассоциации для VideoProgress
+User.hasMany(VideoProgress, {
+  foreignKey: 'userId',
+  as: 'videoProgress',
+});
+
+VideoProgress.belongsTo(User, {
+  foreignKey: 'userId',
+  as: 'user',
+});
+
 // Функция для синхронизации моделей с базой данных
 export const syncModels = async (): Promise<void> => {
   try {
@@ -76,5 +88,6 @@ export {
   Lesson,
   UserProgress,
   Subscription,
+  VideoProgress,
   sequelize,
 }; 

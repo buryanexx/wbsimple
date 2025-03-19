@@ -2,6 +2,12 @@ import { Model, DataTypes, Optional } from 'sequelize';
 import sequelize from '../config/database.js';
 import bcrypt from 'bcryptjs';
 
+// Интерфейс для прогресса пользователя
+interface UserProgressData {
+  completedLessons: number[];
+  completedModules: number[];
+}
+
 // Интерфейс для атрибутов пользователя
 interface UserAttributes {
   id: number;
@@ -15,12 +21,13 @@ interface UserAttributes {
   hasActiveSubscription: boolean;
   subscriptionEndDate?: Date;
   autoRenewal: boolean;
+  progress?: UserProgressData;
   createdAt: Date;
   updatedAt: Date;
 }
 
 // Интерфейс для создания пользователя (некоторые поля могут быть опциональными)
-interface UserCreationAttributes extends Optional<UserAttributes, 'id' | 'isAdmin' | 'hasActiveSubscription' | 'autoRenewal' | 'createdAt' | 'updatedAt'> {}
+interface UserCreationAttributes extends Optional<UserAttributes, 'id' | 'isAdmin' | 'hasActiveSubscription' | 'autoRenewal' | 'progress' | 'createdAt' | 'updatedAt'> {}
 
 // Класс модели пользователя
 class User extends Model<UserAttributes, UserCreationAttributes> implements UserAttributes {
@@ -35,6 +42,7 @@ class User extends Model<UserAttributes, UserCreationAttributes> implements User
   public hasActiveSubscription!: boolean;
   public subscriptionEndDate?: Date;
   public autoRenewal!: boolean;
+  public progress?: UserProgressData;
   public createdAt!: Date;
   public updatedAt!: Date;
 
@@ -103,6 +111,14 @@ User.init(
       type: DataTypes.BOOLEAN,
       allowNull: false,
       defaultValue: false,
+    },
+    progress: {
+      type: DataTypes.JSON,
+      allowNull: true,
+      defaultValue: {
+        completedLessons: [],
+        completedModules: []
+      }
     },
     createdAt: {
       type: DataTypes.DATE,

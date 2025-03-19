@@ -1,88 +1,105 @@
-import { useEffect, useState } from 'react';
+import React, { useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import { WebAppProvider, useWebApp } from '@vkruglikov/react-telegram-web-app';
-import { AuthProvider } from './contexts/AuthContext';
+import { useAuth } from './hooks/useAuth.tsx';
+import BottomNavigation from './components/BottomNavigation';
 
-// Импорт страниц
+// Страницы
 import HomePage from './pages/HomePage';
 import OnboardingPage from './pages/OnboardingPage';
-import SubscriptionPage from './pages/SubscriptionPage';
 import ModulesPage from './pages/ModulesPage';
 import LessonPage from './pages/LessonPage';
-import ProfilePage from './pages/ProfilePage';
 import TemplatesPage from './pages/TemplatesPage';
+import SubscriptionPage from './pages/SubscriptionPage';
+import ProfilePage from './pages/ProfilePage';
 import ChannelPage from './pages/ChannelPage';
 import CalculatorPage from './pages/CalculatorPage';
+import WildberriesCalculatorPage from './pages/WildberriesCalculatorPage';
 import SuccessStoriesPage from './pages/SuccessStoriesPage';
 import TimelinePage from './pages/TimelinePage';
+import MasterClassPage from './pages/MasterClassPage';
 
-// Импорт компонентов
-import BottomNavigation from './components/BottomNavigation';
-import ProtectedRoute from './components/ProtectedRoute';
-
-// Компонент для настройки темы Telegram
-const ThemeProvider = ({ children }: { children: React.ReactNode }) => {
-  const webApp = useWebApp();
-  const [isDarkTheme, setIsDarkTheme] = useState(false);
-
-  useEffect(() => {
-    if (webApp) {
-      // Получаем параметры темы из Telegram WebApp
-      const themeParams = webApp.themeParams;
-      setIsDarkTheme(themeParams?.bg_color === '#212121');
-      
-      // Устанавливаем цвет заголовка
-      webApp.setHeaderColor(isDarkTheme ? '#212121' : '#7B68EE');
-      
-      // Устанавливаем цвет фона
-      webApp.setBackgroundColor(isDarkTheme ? '#212121' : '#F5F5F5');
-    }
-  }, [webApp, isDarkTheme]);
-
-  return (
-    <div className={isDarkTheme ? 'dark' : 'light'}>
-      {children}
-    </div>
-  );
+// Защищенный маршрут
+const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
+  const { isAuthenticated, loading } = useAuth();
+  
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-screen">
+        <div className="w-16 h-16 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
+      </div>
+    );
+  }
+  
+  return isAuthenticated ? <>{children}</> : <Navigate to="/" replace />;
 };
 
 function App() {
+  const { isAuthenticated, loading, user } = useAuth();
+
+  useEffect(() => {
+    // Применяем тему Telegram к приложению
+    document.documentElement.classList.add('telegram-theme');
+    
+    return () => {
+      document.documentElement.classList.remove('telegram-theme');
+    };
+  }, []);
+
   return (
-    <WebAppProvider>
-      <ThemeProvider>
-        <AuthProvider>
-          <Router>
-            <div className="min-h-screen bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100 pb-16">
-              <Routes>
-                <Route path="/" element={<HomePage />} />
-                <Route path="/onboarding" element={<OnboardingPage />} />
-                <Route path="/subscription" element={<SubscriptionPage />} />
-                <Route path="/modules" element={<ModulesPage />} />
-                <Route path="/calculator" element={<CalculatorPage />} />
-                <Route path="/timeline" element={<TimelinePage />} />
-                <Route path="/success-stories" element={<SuccessStoriesPage />} />
-                <Route 
-                  path="/lesson/:moduleId/:lessonId" 
-                  element={<LessonPage />} 
-                />
-                <Route path="/profile" element={<ProfilePage />} />
-                <Route path="/templates" element={<TemplatesPage />} />
-                <Route 
-                  path="/channel" 
-                  element={
-                    <ProtectedRoute>
-                      <ChannelPage />
-                    </ProtectedRoute>
-                  } 
-                />
-                <Route path="*" element={<Navigate to="/" replace />} />
-              </Routes>
-              <BottomNavigation />
-            </div>
-          </Router>
-        </AuthProvider>
-      </ThemeProvider>
-    </WebAppProvider>
+    <Router>
+      <div className="app min-h-screen bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white">
+        <Routes>
+          {/* Публичные маршруты */}
+          <Route path="/" element={<HomePage />} />
+          <Route path="/onboarding" element={<OnboardingPage />} />
+          <Route path="/subscription" element={<SubscriptionPage />} />
+          <Route path="/calculator" element={<CalculatorPage />} />
+          <Route path="/wb-calculator" element={<WildberriesCalculatorPage />} />
+          <Route path="/success-stories" element={<SuccessStoriesPage />} />
+          <Route path="/master-class" element={<MasterClassPage />} />
+          
+          {/* Защищенные маршруты */}
+          <Route path="/modules" element={
+            <ProtectedRoute>
+              <ModulesPage />
+            </ProtectedRoute>
+          } />
+          <Route path="/lesson/:moduleId/:lessonId" element={
+            <ProtectedRoute>
+              <LessonPage />
+            </ProtectedRoute>
+          } />
+          <Route path="/templates" element={
+            <ProtectedRoute>
+              <TemplatesPage />
+            </ProtectedRoute>
+          } />
+          <Route path="/profile" element={
+            <ProtectedRoute>
+              <ProfilePage />
+            </ProtectedRoute>
+          } />
+          <Route path="/channel" element={
+            <ProtectedRoute>
+              <ChannelPage />
+            </ProtectedRoute>
+          } />
+          <Route path="/timeline" element={
+            <ProtectedRoute>
+              <TimelinePage />
+            </ProtectedRoute>
+          } />
+          
+          {/* Маршрут для 404 */}
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
+        
+        {/* Нижняя навигация - отображаем всегда, кроме экрана загрузки */}
+        {!loading && (
+          <BottomNavigation />
+        )}
+      </div>
+    </Router>
   );
 }
 
