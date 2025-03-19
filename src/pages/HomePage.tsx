@@ -1,13 +1,11 @@
 import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { useWebApp } from '@vkruglikov/react-telegram-web-app';
 import Card from '../components/Card';
 import Button from '../components/Button';
 import Icon from '../components/Icon';
+import useWebAppNavigation from '../hooks/useWebAppNavigation';
 
 const HomePage = () => {
-  const navigate = useNavigate();
-  const webApp = useWebApp();
+  const { safeNavigate, webApp } = useWebAppNavigation();
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -22,7 +20,7 @@ const HomePage = () => {
     if (isFirstVisit) {
       // Если первый визит, перенаправляем на онбординг
       localStorage.setItem('wb_simple_first_visit', 'false');
-      navigate('/onboarding');
+      safeNavigate('/onboarding');
     }
     
     // Настраиваем кнопку Telegram
@@ -30,7 +28,7 @@ const HomePage = () => {
       webApp.MainButton.setText('Начать обучение');
       webApp.MainButton.show();
       webApp.MainButton.onClick(() => {
-        navigate('/modules');
+        safeNavigate('/modules');
       });
     }
     
@@ -39,7 +37,7 @@ const HomePage = () => {
       webApp?.MainButton?.hide();
       clearTimeout(timer);
     };
-  }, [navigate, webApp]);
+  }, [safeNavigate, webApp]);
 
   if (isLoading) {
     return (
@@ -49,6 +47,12 @@ const HomePage = () => {
       </div>
     );
   }
+
+  const handleNavigation = (e: React.MouseEvent, path: string) => {
+    e.preventDefault();
+    e.stopPropagation();
+    safeNavigate(path);
+  };
 
   return (
     <div className="flex flex-col items-center justify-center p-4 space-y-6 animate-fade-in pb-36">
@@ -76,7 +80,7 @@ const HomePage = () => {
             variant="white" 
             className="mt-2 bg-white text-[#6A45E8] hover:bg-gray-100"
             size="sm"
-            onClick={() => navigate('/modules')}
+            onClick={(e) => handleNavigation(e, '/modules')}
           >
             Начать обучение
           </Button>
@@ -100,7 +104,7 @@ const HomePage = () => {
             variant="primary" 
             fullWidth
             leftIcon={<Icon name="modules" size={18} />}
-            onClick={() => navigate('/modules')}
+            onClick={(e) => handleNavigation(e, '/modules')}
             className="bg-gradient-to-r from-[#6A45E8] to-[#8A65FF] border-none"
           >
             Модули курса
@@ -110,7 +114,7 @@ const HomePage = () => {
             variant="accent" 
             fullWidth
             leftIcon={<Icon name="templates" size={18} />}
-            onClick={() => navigate('/templates')}
+            onClick={(e) => handleNavigation(e, '/templates')}
             className="bg-gradient-to-r from-[#F97316] to-[#FB923C] border-none"
           >
             Шаблоны
@@ -122,7 +126,7 @@ const HomePage = () => {
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 mb-6">
           <div 
             className="bg-white dark:bg-gray-800 rounded-lg p-4 shadow-sm border border-gray-200 dark:border-gray-700 hover:shadow-md transition-shadow cursor-pointer relative overflow-hidden"
-            onClick={() => navigate('/calculator')}
+            onClick={(e) => handleNavigation(e, '/calculator')}
           >
             {/* Метка "Бесплатно" */}
             <div className="absolute -right-12 top-6 w-36 bg-green-500 text-white text-xs text-center font-medium py-1 transform rotate-45">
@@ -143,7 +147,7 @@ const HomePage = () => {
           
           <div 
             className="bg-white dark:bg-gray-800 rounded-lg p-4 shadow-sm border border-gray-200 dark:border-gray-700 hover:shadow-md transition-shadow cursor-pointer relative overflow-hidden"
-            onClick={() => navigate('/wb-calculator')}
+            onClick={(e) => handleNavigation(e, '/wb-calculator')}
           >
             {/* Метка "Бесплатно" */}
             <div className="absolute -right-12 top-6 w-36 bg-green-500 text-white text-xs text-center font-medium py-1 transform rotate-45">
@@ -164,7 +168,7 @@ const HomePage = () => {
           
           <div 
             className="bg-white dark:bg-gray-800 rounded-lg p-4 shadow-sm border border-gray-200 dark:border-gray-700 hover:shadow-md transition-shadow cursor-pointer"
-            onClick={() => navigate('/timeline')}
+            onClick={(e) => handleNavigation(e, '/timeline')}
           >
             <div className="flex items-center mb-2">
               <div className="w-10 h-10 rounded-full bg-[#F97316] flex items-center justify-center text-white mr-3">
@@ -185,7 +189,7 @@ const HomePage = () => {
           size="lg"
           fullWidth
           className="mb-10 bg-gradient-to-r from-[#F97316] to-[#FB923C] border-none"
-          onClick={() => navigate('/subscription')}
+          onClick={(e) => handleNavigation(e, '/subscription')}
         >
           Оформить подписку за 1899₽
         </Button>

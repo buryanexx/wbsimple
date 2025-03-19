@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { HashRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { useAuth, AuthProvider } from './hooks/useAuth.tsx';
 import BottomNavigation from './components/BottomNavigation';
 
@@ -40,8 +40,23 @@ function AppContent() {
     // Применяем тему Telegram к приложению
     document.documentElement.classList.add('telegram-theme');
     
+    // Предотвращаем перезагрузку по ссылкам
+    const handleLinkClick = (e: MouseEvent) => {
+      const target = e.target as HTMLElement;
+      const link = target.closest('a');
+      
+      if (link && link.getAttribute('href')?.startsWith('/')) {
+        e.preventDefault();
+        const path = link.getAttribute('href') || '/';
+        window.location.hash = path;
+      }
+    };
+    
+    document.addEventListener('click', handleLinkClick);
+    
     return () => {
       document.documentElement.classList.remove('telegram-theme');
+      document.removeEventListener('click', handleLinkClick);
     };
   }, []);
 

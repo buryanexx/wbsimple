@@ -1,10 +1,10 @@
-import { useLocation, useNavigate } from 'react-router-dom';
+import { useLocation } from 'react-router-dom';
 import Icon from './Icon';
+import useWebAppNavigation from '../hooks/useWebAppNavigation';
 
 const BottomNavigation = () => {
   const location = useLocation();
-  const navigate = useNavigate();
-  const currentPath = location.pathname;
+  const { safeNavigate, currentPath } = useWebAppNavigation();
 
   // Проверяем, находимся ли мы на странице урока
   const isLessonPage = currentPath.includes('/lesson/');
@@ -38,6 +38,14 @@ const BottomNavigation = () => {
     }
   ] as const;
 
+  const handleNavigation = (e: React.MouseEvent, path: string) => {
+    e.preventDefault(); // Предотвращаем стандартное поведение кнопки
+    e.stopPropagation(); // Останавливаем всплытие события
+    
+    // Используем безопасную навигацию
+    safeNavigate(path, true);
+  };
+
   return (
     <div className="fixed bottom-0 left-0 right-0 bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 shadow-lg">
       <div className="flex justify-around">
@@ -46,7 +54,7 @@ const BottomNavigation = () => {
           return (
             <button
               key={item.path}
-              onClick={() => navigate(item.path)}
+              onClick={(e) => handleNavigation(e, item.path)}
               className={`flex flex-col items-center py-2 px-3 transition-colors duration-200 ${
                 isActive
                   ? 'text-primary'
