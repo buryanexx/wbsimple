@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { useWebApp } from '@vkruglikov/react-telegram-web-app';
 import { authAPI } from '../services/api';
-import jwt_decode from 'jwt-decode';
+import { jwtDecode } from 'jwt-decode';
 
 // Конфигурация для авторизации
 const AUTH_CONFIG = {
@@ -64,7 +64,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   // Проверка валидности токена
   const isTokenValid = (token: string): boolean => {
     try {
-      const decoded = jwt_decode<DecodedToken>(token);
+      const decoded = jwtDecode<DecodedToken>(token);
       const currentTime = Date.now() / 1000;
       
       // Проверяем, не истек ли срок действия токена
@@ -217,7 +217,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       if (token && user) {
         // Проверяем, не истекает ли токен в ближайшее время
         try {
-          const decoded = jwt_decode<DecodedToken>(token);
+          const decoded = jwtDecode<DecodedToken>(token);
           const currentTime = Date.now() / 1000;
           
           // Если до истечения токена осталось менее 5 минут, обновляем его
