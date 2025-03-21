@@ -96,7 +96,34 @@ export const config = {
 export const telegramHelpers = {
   // Проверяет, запущено ли приложение в контексте Telegram WebApp
   isRunningInTelegram: () => {
-    return !!window.Telegram && !!window.Telegram.WebApp;
+    try {
+      const isTelegramWebAppAvailable = !!window.Telegram && !!window.Telegram.WebApp;
+      
+      // Проверка в режиме разработки - всегда возвращаем true если явно не указано иное
+      if (import.meta.env.DEV && import.meta.env.VITE_FORCE_TELEGRAM_MODE !== 'false') {
+        console.log('DEV режим: Эмулируем запуск в Telegram WebApp');
+        return true;
+      }
+      
+      if (isTelegramWebAppAvailable) {
+        // Дополнительная проверка, что мы действительно внутри Telegram
+        const hasInitData = !!window.Telegram.WebApp.initData;
+        const hasInitDataUnsafe = !!window.Telegram.WebApp.initDataUnsafe;
+        
+        console.log('Проверка Telegram WebApp:', { 
+          hasWebApp: isTelegramWebAppAvailable,
+          hasInitData,
+          hasInitDataUnsafe
+        });
+        
+        return hasInitData || hasInitDataUnsafe;
+      }
+      
+      return false;
+    } catch (error) {
+      console.error('Ошибка при проверке Telegram WebApp:', error);
+      return false;
+    }
   },
   
   // Получает данные пользователя из Telegram WebApp

@@ -181,6 +181,19 @@ const ProfilePage = () => {
     }
   };
 
+  // Функция для создания демо-пользователя (для режима разработки)
+  const createDemoUser = () => {
+    if (!login) return;
+    login();
+  };
+
+  // Функция для быстрого входа в режиме разработки
+  const handleDevLogin = () => {
+    if (login) {
+      login();
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen p-4">
@@ -216,18 +229,66 @@ const ProfilePage = () => {
           <p className="text-gray-600 dark:text-gray-400 mb-6">
             Для доступа к полному функционалу приложения необходимо авторизоваться через Telegram.
           </p>
-          <Button 
-            variant="primary"
-            onClick={() => {
-              if (webApp) {
-                webApp.showAlert('Это приложение работает только в Telegram. Авторизуйтесь, запустив через Telegram.');
-              } else {
-                alert('Запустите приложение через Telegram для автоматической авторизации.');
-              }
-            }}
-          >
-            Авторизоваться
-          </Button>
+          
+          <div className="space-y-4">
+            <Button 
+              variant="primary"
+              onClick={() => {
+                if (webApp) {
+                  webApp.showAlert('Это приложение работает только в Telegram. Авторизуйтесь, запустив через Telegram.');
+                } else {
+                  alert('Запустите приложение через Telegram для автоматической авторизации.');
+                }
+                
+                // Перезагрузим страницу после сообщения
+                setTimeout(() => {
+                  window.location.reload();
+                }, 1500);
+              }}
+            >
+              Авторизоваться
+            </Button>
+            
+            {/* Отображение дебаг-информации в режиме разработки */}
+            {import.meta.env.DEV && (
+              <div className="mt-6 text-left p-4 bg-gray-100 dark:bg-gray-700 rounded-lg text-xs">
+                <h3 className="font-bold mb-2">Дебаг-информация (только в режиме разработки):</h3>
+                <div className="mb-2">
+                  <span className="font-bold">Telegram WebApp доступен:</span> {window.Telegram?.WebApp ? "Да" : "Нет"}
+                </div>
+                <div className="mb-2">
+                  <span className="font-bold">initData:</span> {window.Telegram?.WebApp?.initData ? "Есть" : "Нет"}
+                </div>
+                <div className="mb-2">
+                  <span className="font-bold">Данные пользователя:</span> {window.Telegram?.WebApp?.initDataUnsafe?.user ? "Есть" : "Нет"}
+                </div>
+                
+                <div className="flex space-x-2 mt-4">
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    onClick={() => {
+                      // В режиме разработки перезагружаем страницу, чтобы запустить автоматическую авторизацию
+                      window.location.reload();
+                    }}
+                  >
+                    Перезагрузить страницу
+                  </Button>
+                  
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    onClick={() => {
+                      localStorage.clear();
+                      window.location.reload();
+                    }}
+                  >
+                    Очистить хранилище
+                  </Button>
+                </div>
+              </div>
+            )}
+          </div>
         </div>
       ) : (
         <>

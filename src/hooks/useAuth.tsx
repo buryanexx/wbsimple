@@ -2,6 +2,7 @@ import React, { createContext, useContext, useState, useEffect, ReactNode } from
 import { useWebApp } from '@vkruglikov/react-telegram-web-app';
 import { authAPI } from '../services/api';
 import { jwtDecode } from 'jwt-decode';
+import { telegramHelpers } from '../config';
 
 // Конфигурация для авторизации
 const AUTH_CONFIG = {
@@ -151,17 +152,60 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   
   // Функция для получения данных Telegram
   const getTelegramData = () => {
-    if (!window.Telegram || !window.Telegram.WebApp) {
-      return { initData: '', telegramUser: null };
-    }
-    
     try {
-      const initData = window.Telegram.WebApp.initData;
-      const telegramUser = window.Telegram.WebApp.initDataUnsafe.user;
+      // Проверяем, запущено ли приложение в Telegram
+      const isInTelegram = telegramHelpers.isRunningInTelegram();
+      
+      if (!isInTelegram) {
+        console.warn('Приложение не запущено в Telegram WebApp или отсутствуют данные инициализации');
+        
+        // В режиме разработки возвращаем тестовые данные
+        if (import.meta.env.DEV && import.meta.env.VITE_FORCE_TELEGRAM_MODE === 'true') {
+          console.log('DEV режим: Эмулируем данные Telegram WebApp');
+          
+          return {
+            initData: 'dev_mode=1&user=%7B%22id%22%3A12345678%2C%22first_name%22%3A%22Test%22%2C%22last_name%22%3A%22User%22%2C%22username%22%3A%22testuser%22%7D&auth_date=1615221713&hash=d136abcde23c98736517322c4e8e42926274583c7c163b3973c88cc55c93f82f',
+            telegramUser: {
+              id: 12345678,
+              first_name: 'Test',
+              last_name: 'User',
+              username: 'testuser',
+              language_code: 'ru'
+            }
+          };
+        }
+        
+        return { initData: '', telegramUser: null };
+      }
+      
+      // Получаем данные из Telegram WebApp
+      const initData = window.Telegram?.WebApp?.initData || '';
+      const telegramUser = window.Telegram?.WebApp?.initDataUnsafe?.user || null;
+      
+      console.log('Получены данные Telegram:', { 
+        hasInitData: !!initData, 
+        hasUserData: !!telegramUser,
+        userData: telegramUser ? JSON.stringify(telegramUser) : 'нет данных'
+      });
       
       return { initData, telegramUser };
     } catch (error) {
       console.error('Ошибка при получении данных Telegram:', error);
+      
+      // В режиме разработки предоставляем фейковые данные для тестирования
+      if (import.meta.env.DEV && import.meta.env.VITE_FORCE_TELEGRAM_MODE === 'true') {
+        return {
+          initData: 'dev_mode=1&user=%7B%22id%22%3A12345678%2C%22first_name%22%3A%22Test%22%2C%22last_name%22%3A%22User%22%2C%22username%22%3A%22testuser%22%7D&auth_date=1615221713&hash=d136abcde23c98736517322c4e8e42926274583c7c163b3973c88cc55c93f82f',
+          telegramUser: {
+            id: 12345678,
+            first_name: 'Test',
+            last_name: 'User',
+            username: 'testuser',
+            language_code: 'ru'
+          }
+        };
+      }
+      
       return { initData: '', telegramUser: null };
     }
   };
@@ -241,35 +285,44 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     setError(null);
     
     try {
-      // Для локальной разработки можно использовать демо-пользователя
-      if (process.env.NODE_ENV === 'development' && (!window.Telegram || !window.Telegram.WebApp)) {
-        const demoUser = createDemoUser();
-        setLoading(false);
-        return demoUser;
-      }
-      
+      // Получаем данные Telegram
       const { initData, telegramUser } = getTelegramData();
       
+      // Проверяем, есть ли данные Telegram
       if (!initData || !telegramUser) {
-        // Если мы в режиме разработки и не смогли получить данные Telegram, создаем демо-пользователя
-        if (process.env.NODE_ENV === 'development') {
+        console.warn('Не удалось получить данные Telegram для авторизации');
+        
+        // Для локальной разработки используем демо-пользователя
+        if (import.meta.env.DEV) {
+          console.log('DEV режим: Создаем демо-пользователя для отладки');
           const demoUser = createDemoUser();
           setLoading(false);
           return demoUser;
         }
         
-        throw new Error('Не удалось получить данные Telegram');
+        throw new Error('Не удалось получить данные Telegram. Пожалуйста, запустите приложение из Telegram.');
       }
       
+      console.log('Отправляем запрос на авторизацию с данными:', { 
+        initDataLength: initData.length,
+        telegramUserId: telegramUser.id
+      });
+      
+      // Отправляем запрос на авторизацию
       const response = await authAPI.telegramAuth({ 
         initData, 
         telegramUser 
       });
       
+      // Проверяем ответ от сервера
+      if (!response.data || !response.data.data) {
+        throw new Error('Сервер вернул некорректные данные');
+      }
+      
       const { token, refreshToken, user } = response.data.data;
       
       if (!token || !user) {
-        throw new Error('Сервер вернул некорректные данные');
+        throw new Error('Сервер не вернул токен или данные пользователя');
       }
       
       // Добавляем токен к объекту пользователя
@@ -284,15 +337,20 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         localStorage.setItem(AUTH_CONFIG.storageRefreshTokenKey, refreshToken);
       }
       
+      console.log('Пользователь успешно авторизован:', authenticatedUser.firstName);
+      
       // Устанавливаем пользователя в состояние
       setUser(authenticatedUser);
       return authenticatedUser;
     } catch (error) {
       console.error('Ошибка при авторизации:', error);
-      setError('Ошибка при авторизации');
       
-      // В режиме разработки создаем демо-пользователя при ошибке
-      if (process.env.NODE_ENV === 'development') {
+      // Устанавливаем сообщение об ошибке
+      setError(error.message || 'Ошибка авторизации');
+      
+      // В режиме разработки, если сервер недоступен, создаем демо-пользователя
+      if (import.meta.env.DEV && (error.message?.includes('Network Error') || error.message?.includes('Failed to fetch'))) {
+        console.log('DEV режим: Сервер недоступен, создаем демо-пользователя');
         const demoUser = createDemoUser();
         return demoUser;
       }
@@ -380,14 +438,9 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 export const useAuth = () => {
   const context = useContext(AuthContext);
   
-  if (context === undefined) {
-    throw new Error('useAuth должен использоваться внутри AuthProvider');
+  if (!context) {
+    throw new Error('useAuth must be used within an AuthProvider');
   }
   
   return context;
-};
-
-// Экспортируем функцию для проверки, запущено ли приложение в Telegram
-export const isRunningInTelegram = () => {
-  return !!window.Telegram && !!window.Telegram.WebApp;
 }; 
