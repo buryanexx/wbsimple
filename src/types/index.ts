@@ -33,6 +33,7 @@ export interface User {
   hasActiveSubscription: boolean;
   subscriptionEndDate?: string;
   autoRenewal?: boolean;
+  token?: string;
   progress?: {
     completedLessons: number[];
     completedModules: number[];

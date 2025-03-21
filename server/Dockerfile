@@ -1,24 +1,42 @@
-FROM node:18
+FROM node:18-alpine
 
+# Создание рабочей директории
 WORKDIR /app
 
-# Копируем package.json и package-lock.json
+# Установка зависимостей для сборки
+RUN apk add --no-cache python3 make g++
+
+# Копирование файлов проекта
 COPY package*.json ./
+COPY tsconfig.json ./
+COPY .env.production ./
+COPY prisma ./prisma
 
-# Устанавливаем зависимости
-RUN npm install
+# Установка зависимостей
+RUN npm ci
 
-# Копируем исходный код
-COPY . .
+# Генерация Prisma клиента
+RUN npx prisma generate
 
-# Устанавливаем типы TypeScript
-RUN npm install --save-dev @types/node @types/express
+# Копирование исходного кода
+COPY src ./src
 
-# Компилируем TypeScript в JavaScript
+# Сборка TypeScript в JavaScript
 RUN npm run build
 
-# Открываем порт
-EXPOSE 5000
+# Создание директорий для данных
+RUN mkdir -p logs uploads
 
-# Запускаем приложение
-CMD ["npm", "start"] 
+# Скрипт запуска с миграциями
+RUN echo "#!/bin/sh\n\
+echo 'Waiting for PostgreSQL...'\n\
+sleep 5\n\
+npx prisma migrate deploy\n\
+npm start" > /app/entrypoint.sh && \
+chmod +x /app/entrypoint.sh
+
+# Открытие порта
+EXPOSE 5005
+
+# Запуск приложения
+CMD ["/app/entrypoint.sh"] 

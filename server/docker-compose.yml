@@ -1,0 +1,83 @@
+version: '3.8'
+
+services:
+  # Основной API сервер
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: wbsimple-api
+    restart: unless-stopped
+    ports:
+      - "5005:5005"
+    volumes:
+      - ./logs:/app/logs
+      - ./uploads:/app/uploads
+    environment:
+      - NODE_ENV=production
+      - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/wbsimple
+      - REDIS_URL=redis://redis:6379
+      - PORT=5005
+      - JWT_SECRET=${JWT_SECRET}
+      - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN}
+    depends_on:
+      - postgres
+      - redis
+    networks:
+      - wbsimple-network
+
+  # База данных PostgreSQL
+  postgres:
+    image: postgres:14-alpine
+    container_name: wbsimple-postgres
+    restart: unless-stopped
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=wbsimple
+    networks:
+      - wbsimple-network
+
+  # Кэширование и сессии в Redis
+  redis:
+    image: redis:7-alpine
+    container_name: wbsimple-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    command: redis-server --appendonly yes
+    networks:
+      - wbsimple-network
+
+  # Nginx для проксирования запросов
+  nginx:
+    image: nginx:alpine
+    container_name: wbsimple-nginx
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/conf.d:/etc/nginx/conf.d
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf
+      - ./nginx/ssl:/etc/nginx/ssl
+      - ./client/build:/usr/share/nginx/html
+      - ./logs/nginx:/var/log/nginx
+    depends_on:
+      - api
+    networks:
+      - wbsimple-network
+
+networks:
+  wbsimple-network:
+    driver: bridge
+
+volumes:
+  postgres-data:
+  redis-data: 

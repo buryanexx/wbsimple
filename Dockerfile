@@ -1,24 +1,24 @@
-FROM node:18
+FROM node:18-alpine
 
 WORKDIR /app
 
-# Копируем package.json и package-lock.json
-COPY server/package*.json ./
+# Установка зависимостей для сборки
+RUN apk add --no-cache python3 make g++
 
-# Устанавливаем зависимости
-RUN npm install
+# Копируем только необходимые файлы для установки зависимостей
+COPY package*.json ./
+
+# Установка зависимостей
+RUN npm ci --only=production
 
 # Копируем исходный код
-COPY server/ .
+COPY . .
 
-# Устанавливаем типы TypeScript
-RUN npm install --save-dev @types/node @types/express
-
-# Компилируем TypeScript в JavaScript
+# Компилируем TypeScript
 RUN npm run build
 
 # Открываем порт
-EXPOSE 5000
+EXPOSE 5005
 
 # Запускаем приложение
 CMD ["npm", "start"]

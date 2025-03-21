@@ -7,6 +7,7 @@ export interface Subscription {
   endDate: Date | null;
   plan: 'basic' | 'premium' | 'none';
   features: string[];
+  autoRenewal: boolean;
 }
 
 // Доступные функции для каждого типа подписки
@@ -35,7 +36,8 @@ export const useSubscription = () => {
     isActive: false,
     endDate: null,
     plan: 'none',
-    features: SUBSCRIPTION_FEATURES.none
+    features: SUBSCRIPTION_FEATURES.none,
+    autoRenewal: false
   });
 
   // Обновляем состояние подписки при изменении пользователя
@@ -45,13 +47,15 @@ export const useSubscription = () => {
         isActive: false,
         endDate: null,
         plan: 'none',
-        features: SUBSCRIPTION_FEATURES.none
+        features: SUBSCRIPTION_FEATURES.none,
+        autoRenewal: false
       });
       return;
     }
 
     const isActive = user.hasActiveSubscription;
     const endDate = user.subscriptionEndDate ? new Date(user.subscriptionEndDate) : null;
+    const autoRenewal = user.autoRenewal || false;
     
     // Определяем тип плана (можно расширить логику)
     const plan = isActive ? 'premium' : 'none';
@@ -60,7 +64,8 @@ export const useSubscription = () => {
       isActive,
       endDate,
       plan,
-      features: isActive ? SUBSCRIPTION_FEATURES.premium : SUBSCRIPTION_FEATURES.none
+      features: isActive ? SUBSCRIPTION_FEATURES.premium : SUBSCRIPTION_FEATURES.none,
+      autoRenewal
     });
   }, [user]);
 

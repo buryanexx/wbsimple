@@ -12,6 +12,13 @@ const router = express.Router();
 router.get('/secure-url/:videoId', authenticateToken, videoController.getSecureVideoUrl);
 
 /**
+ * @route GET /api/videos/:videoId/stream
+ * @desc Потоковое воспроизведение видео с проверкой токена
+ * @access Public (защищено токеном)
+ */
+router.get('/:videoId/stream', videoController.streamVideo);
+
+/**
  * @route POST /api/videos/mark-watched/:videoId
  * @desc Отметить видео как просмотренное с указанием прогресса
  * @access Private

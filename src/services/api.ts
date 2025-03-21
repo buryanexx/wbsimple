@@ -11,13 +11,29 @@ const api = axios.create({
   }
 });
 
-// Интерцептор для добавления токена авторизации
+// Получение Telegram initData
+const getTelegramInitData = () => {
+  if (window.Telegram && window.Telegram.WebApp) {
+    return window.Telegram.WebApp.initData;
+  }
+  return '';
+};
+
+// Интерцептор для добавления токена авторизации и initData
 api.interceptors.request.use(
   (config) => {
-    const token = localStorage.getItem('admin_token');
+    // Добавляем токен авторизации
+    const token = localStorage.getItem('wbsimple_token');
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
+    
+    // Добавляем Telegram initData для дополнительной проверки
+    const initData = getTelegramInitData();
+    if (initData) {
+      config.headers['X-Telegram-Init-Data'] = initData;
+    }
+    
     return config;
   },
   (error) => Promise.reject(error)
@@ -27,11 +43,39 @@ api.interceptors.request.use(
 api.interceptors.response.use(
   (response) => response,
   (error) => {
-    // Если ошибка 401 (не авторизован), перенаправляем на страницу входа
+    // Если ошибка 401 (не авторизован), очищаем локальное хранилище и перенаправляем на главную
     if (error.response && error.response.status === 401) {
-      localStorage.removeItem('admin_token');
-      window.location.href = '/login';
+      localStorage.removeItem('wbsimple_token');
+      localStorage.removeItem('wbsimple_user');
+      
+      // Если мы не на главной, перенаправляем на нее
+      if (window.location.pathname !== '/') {
+        window.location.href = '/';
+      } else {
+        // Если мы уже на главной, перезагружаем страницу для повторной авторизации
+        window.location.reload();
+      }
     }
+    
+    // Если ошибка 403 (доступ запрещен), показываем сообщение о необходимости подписки
+    if (error.response && error.response.status === 403) {
+      // Используем WebApp API, если он доступен
+      if (window.Telegram && window.Telegram.WebApp && typeof window.Telegram.WebApp.showAlert === 'function') {
+        window.Telegram.WebApp.showAlert('Для доступа к этому разделу необходима подписка');
+      } else {
+        // Запасной вариант, если WebApp API недоступен
+        alert('Для доступа к этому разделу необходима подписка');
+      }
+      
+      // Если пользователь пытается получить доступ к защищенному контенту, перенаправляем на страницу подписки
+      const isAccessingProtectedContent = window.location.pathname.includes('/lessons') || 
+                                         window.location.pathname.includes('/modules');
+      
+      if (isAccessingProtectedContent) {
+        window.location.href = '/subscription';
+      }
+    }
+    
     return Promise.reject(error);
   }
 );
@@ -39,12 +83,15 @@ api.interceptors.response.use(
 // API для аутентификации
 export const authAPI = {
   // Аутентификация через Telegram
-  telegramAuth: (data: { initData: string, telegramUser: any }) => api.post('/auth/telegram', data),
+  telegramAuth: (data: { initData: string, telegramUser: any }) => 
+    api.post('/auth/telegram', data),
   
   // Получение данных текущего пользователя
-  getCurrentUser: (initData?: string) => api.get('/auth/me', {
-    headers: initData ? { 'X-Telegram-Init-Data': initData } : undefined
-  })
+  getCurrentUser: () => api.get('/auth/me'),
+  
+  // Обновление токена с использованием refresh токена
+  refreshToken: (refreshToken: string) => 
+    api.post('/auth/refresh-token', { refreshToken })
 };
 
 // API для модулей
@@ -92,25 +139,33 @@ export const subscriptionsAPI = {
   getSubscriptionInfo: () => api.get('/subscriptions/info'),
   
   // Создание новой подписки
-  createSubscription: () => api.post('/subscriptions'),
+  createSubscription: (data: { plan: string, paymentMethod: string }) => 
+    api.post('/subscriptions', data),
   
   // Отмена автопродления подписки
   cancelAutoRenewal: () => api.post('/subscriptions/cancel-auto-renewal'),
   
   // Включение автопродления подписки
-  enableAutoRenewal: () => api.post('/subscriptions/enable-auto-renewal')
+  enableAutoRenewal: () => api.post('/subscriptions/enable-auto-renewal'),
+  
+  // Получение URL для оплаты через ЮКассу
+  getPaymentUrl: (planId: string) => api.post('/subscriptions/payment-url', { planId }),
+  
+  // Проверка статуса платежа
+  checkPaymentStatus: (paymentId: string) => api.get(`/subscriptions/payment-status/${paymentId}`)
 };
 
 // API для видео
 export const videosAPI = {
   // Получение защищенного URL для видео
-  getSecureVideoUrl: (videoId: string) => api.get(`/videos/${videoId}/secure-url`),
+  getSecureVideoUrl: (videoId: string) => api.get(`/videos/secure-url/${videoId}`),
   
   // Отметка видео как просмотренного
-  markVideoAsWatched: (videoId: string, progress: number) => api.post(`/videos/${videoId}/watched`, { progress }),
+  markVideoAsWatched: (videoId: string, progress: number, lessonId: string) => 
+    api.post(`/videos/mark-watched/${videoId}`, { progress, lessonId }),
   
   // Получение прогресса просмотра видео
-  getVideoProgress: (videoId: string) => api.get(`/videos/${videoId}/progress`)
+  getVideoProgress: (videoId: string) => api.get(`/videos/progress/${videoId}`)
 };
 
 export default api; 

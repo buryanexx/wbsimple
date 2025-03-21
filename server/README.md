@@ -1,103 +1,160 @@
-# WB Simple - Бэкенд
+# WB Simple API
 
-Бэкенд для образовательной платформы WB Simple - Telegram Mini App для обучения заработку на Wildberries.
+Масштабируемый REST API сервер для образовательной платформы WB Simple, предназначенной для продавцов Wildberries.
 
-## Технологии
+## Технологический стек
 
-- Node.js
-- Express
+- Node.js (v18+)
 - TypeScript
-- MongoDB (Mongoose)
-- JWT для аутентификации
-- Telegram Bot API
-- Telegram Payments API
+- Express.js
+- PostgreSQL (с Prisma ORM)
+- Redis (для кэширования и сессий)
+- JWT (аутентификация)
+- Docker и Docker Compose (контейнеризация)
+- Nginx (в качестве прокси)
 
-## Структура проекта
+## Особенности архитектуры
 
+- Использование современных практик разработки Node.js
+- Масштабируемая архитектура с возможностью горизонтального масштабирования
+- Эффективное кэширование для повышения производительности
+- Контейнеризация для упрощения развертывания
+- Интеграция с Telegram WebApp для аутентификации
+- Полная поддержка TypeScript для типобезопасной разработки
+- Структурированное логирование для отслеживания работы приложения
+
+## Начало работы
+
+### Предварительные требования
+
+- Node.js v18 или выше
+- Docker и Docker Compose (для контейнеризации)
+- PostgreSQL (если разработка без Docker)
+- Redis (если разработка без Docker)
+
+### Установка
+
+1. Клонируйте репозиторий:
+```bash
+git clone <url-репозитория>
+cd wbsimple-api
 ```
-src/
-  ├── config/         # Конфигурация приложения
-  ├── controllers/    # Контроллеры для обработки запросов
-  ├── middleware/     # Промежуточное ПО (middleware)
-  ├── models/         # Модели данных Mongoose
-  ├── routes/         # Маршруты API
-  ├── services/       # Сервисы для бизнес-логики
-  ├── utils/          # Вспомогательные утилиты
-  └── index.ts        # Точка входа в приложение
-```
 
-## Установка и запуск
-
-1. Установите зависимости:
-
+2. Установите зависимости:
 ```bash
 npm install
 ```
 
-2. Создайте файл `.env` в корне проекта и заполните его:
-
+3. Создайте .env файл на основе .env.example:
+```bash
+cp .env.example .env
 ```
-PORT=5000
-MONGODB_URI=mongodb://localhost:27017/wbsimple
-JWT_SECRET=your_jwt_secret_key_change_in_production
-NODE_ENV=development
+
+4. Настройте переменные окружения в .env файле:
+```
+# Минимально необходимые настройки
+DATABASE_URL=postgresql://postgres:postgres@localhost:5432/wbsimple
 TELEGRAM_BOT_TOKEN=your_telegram_bot_token
-TELEGRAM_PAYMENT_TOKEN=your_telegram_payment_token
+JWT_SECRET=your_jwt_secret
 ```
 
-3. Запустите MongoDB (локально или используйте MongoDB Atlas).
-
-4. Заполните базу данных тестовыми данными:
+### Запуск для разработки
 
 ```bash
-npm run seed
-```
+# Генерация клиента Prisma
+npx prisma generate
 
-5. Запустите сервер в режиме разработки:
+# Запуск миграций базы данных
+npx prisma migrate dev
 
-```bash
+# Запуск сервера
 npm run dev
+```
+
+### Запуск с использованием Docker
+
+```bash
+# Сборка и запуск всех сервисов
+docker-compose up -d
+
+# Или используйте скрипт деплоя
+./deploy.sh
+```
+
+## Структура проекта
+
+```
+├── src/                # Исходный код
+│   ├── config/         # Конфигурация приложения
+│   ├── controllers/    # Контроллеры для обработки запросов
+│   ├── middlewares/    # Middleware функции
+│   ├── models/         # Модели данных и взаимодействие с БД
+│   ├── routes/         # Маршруты API
+│   ├── services/       # Бизнес-логика
+│   ├── types/          # TypeScript типы
+│   ├── utils/          # Вспомогательные функции
+│   └── index.ts        # Точка входа в приложение
+├── prisma/             # Схема Prisma и миграции
+├── dist/               # Скомпилированный JavaScript (в .gitignore)
+├── logs/               # Логи приложения (в .gitignore)
+├── node_modules/       # Зависимости (в .gitignore)
+├── docker-compose.yml  # Конфигурация Docker Compose
+├── Dockerfile          # Инструкции для сборки Docker образа
+├── .env.example        # Пример файла окружения
+├── .env                # Переменные окружения (в .gitignore)
+├── package.json        # Зависимости и скрипты
+├── tsconfig.json       # Конфигурация TypeScript
+└── README.md           # Документация проекта
 ```
 
 ## API Endpoints
 
 ### Аутентификация
 
-- `POST /api/auth/telegram` - Аутентификация пользователя Telegram
-- `GET /api/auth/me` - Получение данных текущего пользователя
+- `POST /api/auth/telegram` - Аутентификация через Telegram WebApp
+- `GET /api/auth/me` - Получение информации о текущем пользователе
+- `POST /api/auth/progress` - Обновление прогресса пользователя
 
-### Модули
+### Будущие эндпоинты
 
-- `GET /api/modules` - Получение всех модулей
-- `GET /api/modules/:moduleId` - Получение модуля по ID
-- `POST /api/modules` - Создание нового модуля (для админов)
-- `PUT /api/modules/:moduleId` - Обновление модуля (для админов)
-- `DELETE /api/modules/:moduleId` - Удаление модуля (для админов)
-- `POST /api/modules/:moduleId/complete` - Отметка модуля как завершенного
+- `GET /api/modules` - Получение списка модулей
+- `GET /api/modules/:id` - Получение информации о модуле
+- `GET /api/lessons/:id` - Получение информации об уроке
+- `POST /api/feedback` - Отправка обратной связи
 
-### Уроки
+## Разработка
 
-- `GET /api/lessons/module/:moduleId` - Получение всех уроков модуля
-- `GET /api/lessons/:moduleId/:lessonId` - Получение урока по ID
-- `POST /api/lessons` - Создание нового урока (для админов)
-- `PUT /api/lessons/:moduleId/:lessonId` - Обновление урока (для админов)
-- `DELETE /api/lessons/:moduleId/:lessonId` - Удаление урока (для админов)
-- `POST /api/lessons/:moduleId/:lessonId/complete` - Отметка урока как завершенного
+### Добавление новых контроллеров
 
-### Шаблоны
+1. Создайте новый файл в директории `src/controllers/`
+2. Определите классовый контроллер с необходимыми методами
+3. Создайте соответствующие типы в `src/types/`
+4. Создайте маршруты в `src/routes/`
+5. Добавьте маршруты в `src/routes/index.ts`
 
-- `GET /api/templates` - Получение всех шаблонов
-- `GET /api/templates/categories` - Получение категорий шаблонов
-- `GET /api/templates/:templateId` - Получение шаблона по ID
-- `GET /api/templates/:templateId/download` - Скачивание шаблона
-- `POST /api/templates` - Создание нового шаблона (для админов)
-- `PUT /api/templates/:templateId` - Обновление шаблона (для админов)
-- `DELETE /api/templates/:templateId` - Удаление шаблона (для админов)
+### Запуск тестов
 
-### Подписки
+```bash
+npm run test
+```
 
-- `GET /api/subscriptions/info` - Получение информации о подписке пользователя
-- `POST /api/subscriptions` - Создание новой подписки
-- `POST /api/subscriptions/cancel-auto-renewal` - Отмена автопродления подписки
-- `POST /api/subscriptions/enable-auto-renewal` - Включение автопродления подписки
-- `POST /api/subscriptions/webhook` - Обработка webhook от Telegram Payments 
+## Развертывание
+
+### Деплой на сервер
+
+1. Убедитесь, что Docker и Docker Compose установлены на сервере
+2. Скопируйте проект на сервер
+3. Создайте и настройте .env.production
+4. Запустите скрипт деплоя:
+
+```bash
+./deploy.sh
+```
+
+## Лицензия
+
+Этот проект является приватным и предназначен только для использования в рамках компании.
+
+## Авторы
+
+- Команда WB Simple 
